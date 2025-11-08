@@ -22,7 +22,7 @@ export const createGroup = async (name, members, description = "") => {
 
 export const getGroupMessages = async (groupId) => {
   const token = localStorage.getItem("token");
-  const res = await api.get(`/messages/group/${groupId}`, {
+  const res = await api.get(`/groups/${groupId}/messages`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;
@@ -31,8 +31,8 @@ export const getGroupMessages = async (groupId) => {
 export const sendGroupMessage = async (groupId, content) => {
   const token = localStorage.getItem("token");
   const res = await api.post(
-    "/messages/group",
-    { groupId, content },
+    `/groups/${groupId}/messages`,
+    { content },
     { headers: { Authorization: `Bearer ${token}` } }
   );
   return res.data;

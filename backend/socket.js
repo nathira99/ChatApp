@@ -85,6 +85,8 @@ const initSocket = (server) => {
   });
 
   console.log("✅ Socket.io initialized successfully");
+
+  return io;
 };
 
 module.exports = initSocket;

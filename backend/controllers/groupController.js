@@ -1,5 +1,11 @@
+const { Server } = require("socket.io");
 const Group = require("../models/Group");
 const Message = require("../models/Message");
+
+let ioInstance = null;
+exports.setIO = (io) => {
+  ioInstance = io;
+};
 
 // ✅ Get all groups where user is a member
 exports.getGroups = async (req, res) => {
@@ -59,10 +65,12 @@ exports.getGroupMessages = async (req, res) => {
 // ✅ Send Group Message
 exports.sendGroupMessage = async (req, res) => {
   try {
-    const { groupId, content } = req.body;
+    const { groupId } = req.params;
+    const { content } = req.body;
     const senderId = req.user._id;
+        console.log("📩 Sending group message", { groupId, content, senderId });
 
-    const message = await GroupMessage.create({
+    const message = await Message.create({
       sender: senderId,
       group: groupId,
       content,
@@ -70,14 +78,13 @@ exports.sendGroupMessage = async (req, res) => {
 
     const populated = await message.populate("sender", "name email");
 
-    // 🔥 Emit message to group room
-    if (req.io) {
-      req.io.to(groupId).emit("message:receive", populated);
-    }
+    // ✅ Emit message to group room globally
+    if (ioInstance) ioInstance.to(groupId).emit("group:message:receive", populated);
+    else console.log("⚠️ ioInstance is undefined!");
 
     res.status(201).json(populated);
   } catch (err) {
-    console.error("Error sending group message:", err);
-    res.status(500).json({ error: "Server error sending group message" });
+    console.error("❌ Group message error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
