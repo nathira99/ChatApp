@@ -7,6 +7,7 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
   const [description, setDescription] = useState("");
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -18,7 +19,7 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
       const res = await api.get("/users");
       setUsers(res.data);
     } catch (err) {
-      console.error("Error fetching users:", err);
+      console.error("❌ Error fetching users:", err);
     }
   };
 
@@ -32,7 +33,9 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (selectedUsers.length < 2) return alert("Select at least 2 members");
+    if (!groupName.trim()) return alert("Please enter a group name");
+    if (selectedUsers.length < 2)
+      return alert("Select at least 2 members for the group");
 
     setLoading(true);
     try {
@@ -40,11 +43,14 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
         name: groupName,
         description,
         members: selectedUsers,
+        isPrivate,
       });
+
       onGroupCreated(res.data);
       onClose();
     } catch (err) {
-      console.error("Error creating group:", err);
+      console.error("❌ Error creating group:", err);
+      alert("Failed to create group");
     } finally {
       setLoading(false);
     }
@@ -66,6 +72,7 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Group Name */}
           <input
             type="text"
             placeholder="Group Name"
@@ -75,6 +82,7 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
             required
           />
 
+          {/* Description */}
           <textarea
             placeholder="Description (optional)"
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none dark:bg-gray-700 dark:text-gray-200"
@@ -82,6 +90,28 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
             onChange={(e) => setDescription(e.target.value)}
           />
 
+          {/* Privacy Option */}
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Privacy:
+              </label>
+              <select
+                value={isPrivate ? "private" : "public"}
+                onChange={(e) => setIsPrivate(e.target.value === "private")}
+                className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+              >
+                <option value="public">Public</option>
+                <option value="private">Private</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 ml-1 dark:text-gray-400">
+              • <b>Public:</b> Anyone can view and request to join. 
+              • <b>Private:</b> Only members can see or access messages.
+            </p>
+          </div>
+
+          {/* User Selection */}
           <div className="max-h-48 overflow-y-auto space-y-2">
             {users.map((user) => (
               <div
@@ -99,6 +129,7 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
             ))}
           </div>
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}

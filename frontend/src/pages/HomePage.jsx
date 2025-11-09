@@ -124,7 +124,7 @@ export default function HomePage() {
         {/* Chat Window */}
         <div className="flex-1 flex flex-col">
           {selectedChat ? (
-            <ChatWindow chat={selectedChat} />
+            <ChatWindow chat={selectedChat} onClose={() => setSelectedChat(null)} />
           ) : (
             <div className="flex flex-1 items-center justify-center text-gray-500 text-lg">
               Select a {activeTab === "users" ? "user" : "group"} to start chatting 💬

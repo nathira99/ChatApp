@@ -5,11 +5,10 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
   const [content, setContent] = useState("");
   const [file, setFile] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const typingTimeout = useRef(null);
   const fileInputRef = useRef(null);
 
-  // ✅ Handle typing indicator
+  // 🔹 Handle typing indicator
   const handleChange = (e) => {
     const value = e.target.value;
     setContent(value);
@@ -26,7 +25,7 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
     }, 1500);
   };
 
-  // ✅ Handle send text message
+  // 🔹 Handle send
   const handleSend = (e) => {
     e.preventDefault();
     if (!content.trim() && !file) return;
@@ -46,22 +45,18 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
     setIsTyping(false);
   };
 
-  // ✅ Handle file selection
+  // 🔹 File select
   const handleFileSelect = (e) => {
     const selected = e.target.files[0];
     if (selected) setFile(selected);
   };
 
-  // ✅ Remove file
   const removeFile = () => {
     setFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ✅ Cleanup typing timeout
-  useEffect(() => {
-    return () => clearTimeout(typingTimeout.current);
-  }, []);
+  useEffect(() => () => clearTimeout(typingTimeout.current), []);
 
   return (
     <div className="w-full border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
@@ -71,38 +66,32 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
           <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
             📎 {file.name}
           </span>
-          <button
-            onClick={removeFile}
-            className="text-red-500 hover:text-red-700 ml-2"
-          >
+          <button onClick={removeFile} className="text-red-500 hover:text-red-700 ml-2">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* Input Row */}
-      <form
-        onSubmit={handleSend}
-        className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg"
-      >
-        {/* File Upload */}
+      <form onSubmit={handleSend} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg">
+        {/* Attach */}
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300"
-          disabled={uploading}
         >
           <Paperclip className="w-5 h-5" />
         </button>
         <input
           type="file"
+          id="chatFile"
+          name="chatFile"
           ref={fileInputRef}
           onChange={handleFileSelect}
           className="hidden"
-          accept="image/*,video/*,.pdf,.doc,.docx"
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
         />
 
-        {/* Emoji Button (Optional placeholder) */}
         <button
           type="button"
           className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300"
@@ -110,21 +99,18 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
           <Smile className="w-5 h-5" />
         </button>
 
-        {/* Text Input */}
         <input
           type="text"
           value={content}
           onChange={handleChange}
           placeholder="Type a message..."
-          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
         />
 
-        {/* Send Button / Mic */}
         {content.trim() || file ? (
           <button
             type="submit"
-            disabled={uploading}
-            className="bg-blue-600 hover:bg-blue-700 p-2 rounded-full text-white transition disabled:opacity-50"
+            className="bg-blue-600 hover:bg-blue-700 p-2 rounded-full text-white transition"
           >
             <Send className="w-5 h-5" />
           </button>

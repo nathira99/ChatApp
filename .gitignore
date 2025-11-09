@@ -8,6 +8,8 @@ backend/node_modules/
 frontend/.env
 backend/.env
 
+backend/uploads/
+
 # Build outputs
 build/
 dist/

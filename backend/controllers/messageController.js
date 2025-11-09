@@ -11,11 +11,16 @@ exports.sendMessage = async (req, res) => {
     const senderId = req.user._id;
 
     if (!receiverId || !content) {
-      return res.status(400).json({ error: "Receiver and content are required." });
+      return res
+        .status(400)
+        .json({ error: "Receiver and content are required." });
     }
 
     // Encrypt message
-    const encryptedContent = CryptoJS.AES.encrypt(content, SECRET_KEY).toString();
+    const encryptedContent = CryptoJS.AES.encrypt(
+      content,
+      SECRET_KEY
+    ).toString();
 
     const message = await Message.create({
       sender: senderId,
@@ -37,35 +42,37 @@ exports.sendMessage = async (req, res) => {
   }
 };
 
-// ✅ Send File Message (supports image, pdf, doc)
+// ✅ Send file message (image / video / document)
 exports.sendFileMessage = async (req, res) => {
   try {
-    const { receiverId } = req.body;
-    const senderId = req.user._id;
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: "No file uploaded" });
 
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const baseUrl = `${req.protocol}://${req.get("host")}`; // http://localhost:5000
 
-    const fileUrl = `/uploads/${req.file.filename}`;
-    const fileType = req.file.mimetype;
+    let messageType = "file";
+    if (file.mimetype.startsWith("image/")) messageType = "image";
+    else if (file.mimetype.startsWith("video/")) messageType = "video";
+    else if (file.mimetype.startsWith("audio/")) messageType = "audio";
+    else messageType = "document";
 
     const message = await Message.create({
-      sender: senderId,
-      receiver: receiverId,
-      content: `📎 File sent: ${req.file.originalname}`,
-      fileUrl,
-      fileType,
+      sender: req.user._id,
+      receiver: req.body.receiverId || null,
+      content: file.originalname,
+      fileUrl: `${baseUrl}/uploads/${file.filename}`,
+      fileType: file.mimetype,
+      fileName: file.originalname,
+      fileSize: file.size,
+      type: messageType, // ✅ correctly classified
     });
 
-    const populated = await message.populate("sender receiver", "name email");
+    const populatedMessage = await message.populate("sender", "name email");
 
-    if (req.io) {
-      req.io.to(receiverId.toString()).emit("message:receive", populated);
-    }
-
-    res.status(201).json(populated);
+    res.status(201).json(populatedMessage);
   } catch (error) {
-    console.error("❌ Error sending file:", error);
-    res.status(500).json({ error: "Server error uploading file" });
+    console.error("❌ File message error:", error);
+    res.status(500).json({ message: "Server error sending file" });
   }
 };
 

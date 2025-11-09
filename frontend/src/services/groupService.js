@@ -37,3 +37,27 @@ export const sendGroupMessage = async (groupId, content) => {
   );
   return res.data;
 };
+
+// ✅ Admin adds member
+export const addGroupMember = async (groupId, memberId) => {
+  const { data } = await api.post(`/groups/${groupId}/add-member`, { memberId });
+  return data;
+};
+
+// ✅ Admin removes member
+export const removeGroupMember = async (groupId, memberId) => {
+  const { data } = await api.post(`/groups/${groupId}/remove-member`, { memberId });
+  return data;
+};
+
+// ✅ User requests to join
+export const requestGroupJoin = async (groupId) => {
+  const { data } = await api.post(`/groups/${groupId}/join`);
+  return data;
+};
+
+// ✅ Admin handles join request (approve/reject)
+export const manageJoinRequest = async (groupId, userId, action) => {
+  const { data } = await api.post(`/groups/${groupId}/manage-request`, { userId, action });
+  return data;
+};
