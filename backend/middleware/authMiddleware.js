@@ -4,6 +4,7 @@ const User = require("../models/User");
 // ✅ Protect Middleware
 const protect = async (req, res, next) => {
   let token;
+  if (User.blocked) return res.status(403).json({ message: "Account suspended" });
   if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
     try {
       token = req.headers.authorization.split(" ")[1];

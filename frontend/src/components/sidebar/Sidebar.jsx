@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { User, Settings } from "lucide-react";
+import { User, Group } from "lucide-react";
 import api from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -75,22 +75,6 @@ export default function Sidebar({ onSelectChat }) {
         ) : (
           <p className="text-center text-gray-500 mt-4">No users found</p>
         )}
-      </div>
-
-      {/* ⚙️ Footer Navigation */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 flex justify-between">
-        <Link
-          to="/profile"
-          className="flex bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-lg items-center gap-2 hover:opacity-90 transition"
-        >
-          <User size={18} /> Profile
-        </Link>
-        <Link
-          to="/settings"
-          className="flex bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-lg items-center gap-2 hover:opacity-90 transition"
-        >
-          <Settings size={18} /> Settings
-        </Link>
       </div>
     </div>
   );

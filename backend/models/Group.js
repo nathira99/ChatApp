@@ -5,6 +5,7 @@ const groupSchema = new mongoose.Schema({
   description: { type: String },
   isPrivate: { type: Boolean, default: false }, // 🔹 new field
   admins: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  creator: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   joinRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 }, { timestamps: true });

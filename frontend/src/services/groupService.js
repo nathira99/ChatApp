@@ -61,3 +61,11 @@ export const manageJoinRequest = async (groupId, userId, action) => {
   const { data } = await api.post(`/groups/${groupId}/manage-request`, { userId, action });
   return data;
 };
+
+export const groupService = {
+  getGroupDetails: (id) => api.get(`/groups/${id}`).then((res) => res.data),
+  removeMember: (groupId, memberId) =>
+    api.delete(`/groups/${groupId}/members/${memberId}`).then((res) => res.data),
+  exitGroup: (id) => api.post(`/groups/${id}/exit`).then((res) => res.data),
+  deleteGroup: (id) => api.delete(`/groups/${id}`).then((res) => res.data),
+};

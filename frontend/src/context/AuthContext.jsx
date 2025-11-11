@@ -1,5 +1,5 @@
 // src/context/AuthContext.jsx
-import React, { createContext, useEffect, useState } from "react";
+import React, { useContext,createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 
@@ -14,6 +14,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem("token");
       const userData = localStorage.getItem("user");
+      console.log("Auth user state changed:", user);
+      
       if (token && userData && userData !== "undefined") {
         const parsed = JSON.parse(userData);
         if (parsed && parsed._id) {

@@ -32,31 +32,24 @@ exports.addMember = async (req, res) => {
     res.status(500).json({ message: "Server error adding member" });
   }
 };
-
-// ✅ Admin removes a member
+// ❌ Remove member (admin or creator only)
 exports.removeMember = async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const { memberId } = req.body;
-
+    const { groupId, memberId } = req.params;
     const group = await Group.findById(groupId);
+
     if (!group) return res.status(404).json({ message: "Group not found" });
+    if (!group.creator.equals(req.user._id) && !group.admins.includes(req.user._id))
+      return res.status(403).json({ message: "Not authorized" });
 
-    if (!group.admins.includes(req.user._id))
-      return res.status(403).json({ message: "Only admin can remove members" });
-
-    group.members = group.members.filter(
-      (m) => m.toString() !== memberId.toString()
-    );
+    group.members.pull(memberId);
+    group.admins.pull(memberId);
     await group.save();
-
-    res.status(200).json({ message: "Member removed successfully", group });
+    res.json({ message: "Member removed" });
   } catch (err) {
-    console.error("Remove member error:", err);
-    res.status(500).json({ message: "Server error removing member" });
+    res.status(500).json({ message: err.message });
   }
 };
-
 // ✅ User requests to join group
 exports.requestJoin = async (req, res) => {
   try {
@@ -79,7 +72,6 @@ exports.requestJoin = async (req, res) => {
     res.status(500).json({ message: "Server error sending join request" });
   }
 };
-
 // ✅ Admin approves or rejects join request
 exports.handleJoinRequest = async (req, res) => {
   try {
@@ -112,8 +104,6 @@ exports.handleJoinRequest = async (req, res) => {
     res.status(500).json({ message: "Server error managing join request" });
   }
 };
-
-
 // ✅ Get all groups where user is a member
 exports.getGroups = async (req, res) => {
   try {
@@ -130,32 +120,31 @@ exports.getGroups = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 // ✅ Create a new group
 exports.createGroup = async (req, res) => {
   try {
-    const { name, description, members } = req.body;
+    const { name, description, members=[], isPrivate } = req.body;
 
-    if (!name || !members) {
-      return res.status(400).json({ message: "Name and members required" });
+    if (!name ) {
+      return res.status(400).json({ message: "Group Name required" });
     }
-
-    const uniqueMembers = [...new Set([...members, req.user._id.toString()])];
-
-    const newGroup = await Group.create({
+    const group = await Group.create({
       name,
       description,
-      members: uniqueMembers,
+      members: [...new Set([...members, req.user._id])],
+      admins: [req.user._id],
+      creator: req.user._id,
+      isPrivate,
     });
+    
+    const populated = await group.populate("creator members admins", "name email");
 
-    res.status(201).json(newGroup);
+    res.status(201).json(group);
   } catch (err) {
     console.error("Error creating group:", err);
     res.status(500).json({ message: "Server error creating group" });
   }
 };
-
-
 // ✅ Get Group Messages
 exports.getGroupMessages = async (req, res) => {
   try {
@@ -168,7 +157,6 @@ exports.getGroupMessages = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 // ✅ Send Group Message
 exports.sendGroupMessage = async (req, res) => {
   try {
@@ -219,5 +207,55 @@ exports.uploadGroupFile = async (req, res) => {
   } catch (err) {
     console.error("❌ Group file message error:", err);
     res.status(500).json({ error: "Server error uploading group file" });
+  }
+};
+// Get group details (with creator, members, admins)
+exports.getGroupDetails = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id)
+      .populate("creator", "name email")
+      .populate("members", "name email")
+      .populate("admins", "name email");
+
+    if (!group) return res.status(404).json({ message: "Group not found" });
+    res.json(group);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+// Exit group (any member)
+exports.exitGroup = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    group.members.pull(req.user._id);
+    group.admins.pull(req.user._id);
+
+    // if creator exits, auto delete
+    if (group.creator.equals(req.user._id)) {
+      await group.deleteOne();
+      return res.json({ message: "Group deleted as creator exited" });
+    }
+
+    await group.save();
+    res.json({ message: "Exited group" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+// Delete group (creator only)
+exports.deleteGroup = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    if (!group.creator.equals(req.user._id))
+      return res.status(403).json({ message: "Only creator can delete group" });
+
+    await group.deleteOne();
+    res.json({ message: "Group deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

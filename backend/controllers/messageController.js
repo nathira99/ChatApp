@@ -1,26 +1,30 @@
 const Message = require("../models/Message");
+const Block = require("../models/Block");
 const CryptoJS = require("crypto-js");
-const path = require("path");
 
 const SECRET_KEY = process.env.ENCRYPTION_KEY || "default_secret_key";
 
-// ✅ Send Text Message (Encrypt before saving)
+/* ----------------------------- SEND TEXT MESSAGE ----------------------------- */
 exports.sendMessage = async (req, res) => {
   try {
     const { receiverId, content } = req.body;
     const senderId = req.user._id;
 
-    if (!receiverId || !content) {
-      return res
-        .status(400)
-        .json({ error: "Receiver and content are required." });
-    }
+    if (!receiverId || !content)
+      return res.status(400).json({ error: "Receiver and content are required." });
 
-    // Encrypt message
-    const encryptedContent = CryptoJS.AES.encrypt(
-      content,
-      SECRET_KEY
-    ).toString();
+    // 🔒 Check if chat between these two users is blocked
+    const pairBlocked = await Block.exists({
+      $or: [
+        { blocker: senderId, blocked: receiverId },
+        { blocker: receiverId, blocked: senderId },
+      ],
+    });
+    if (pairBlocked)
+      return res.status(403).json({ error: "Messaging blocked between these users." });
+
+    // 🔐 Encrypt message before saving
+    const encryptedContent = CryptoJS.AES.encrypt(content, SECRET_KEY).toString();
 
     const message = await Message.create({
       sender: senderId,
@@ -30,10 +34,8 @@ exports.sendMessage = async (req, res) => {
 
     const populated = await message.populate("sender receiver", "name email");
 
-    // Send real-time socket update (if socket exists)
-    if (req.io) {
-      req.io.to(receiverId.toString()).emit("message:receive", populated);
-    }
+    // 🔔 Emit real-time message if socket is attached
+    if (req.io) req.io.to(receiverId.toString()).emit("message:receive", populated);
 
     res.status(201).json(populated);
   } catch (err) {
@@ -42,13 +44,26 @@ exports.sendMessage = async (req, res) => {
   }
 };
 
-// ✅ Send file message (image / video / document)
+/* ----------------------------- SEND FILE MESSAGE ----------------------------- */
 exports.sendFileMessage = async (req, res) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ message: "No file uploaded" });
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`; // http://localhost:5000
+    const { receiverId } = req.body;
+    const senderId = req.user._id;
+
+    // 🔒 Check pair block before sending
+    const pairBlocked = await Block.exists({
+      $or: [
+        { blocker: senderId, blocked: receiverId },
+        { blocker: receiverId, blocked: senderId },
+      ],
+    });
+    if (pairBlocked)
+      return res.status(403).json({ message: "File sharing blocked between these users." });
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
 
     let messageType = "file";
     if (file.mimetype.startsWith("image/")) messageType = "image";
@@ -57,30 +72,43 @@ exports.sendFileMessage = async (req, res) => {
     else messageType = "document";
 
     const message = await Message.create({
-      sender: req.user._id,
-      receiver: req.body.receiverId || null,
+      sender: senderId,
+      receiver: receiverId,
       content: file.originalname,
       fileUrl: `${baseUrl}/uploads/${file.filename}`,
       fileType: file.mimetype,
       fileName: file.originalname,
       fileSize: file.size,
-      type: messageType, // ✅ correctly classified
+      type: messageType,
     });
 
-    const populatedMessage = await message.populate("sender", "name email");
+    const populated = await message.populate("sender", "name email");
 
-    res.status(201).json(populatedMessage);
+    if (req.io) req.io.to(receiverId.toString()).emit("message:receive", populated);
+
+    res.status(201).json(populated);
   } catch (error) {
     console.error("❌ File message error:", error);
     res.status(500).json({ message: "Server error sending file" });
   }
 };
 
-// ✅ Get All Messages Between Two Users (Decrypt on read)
+/* ----------------------------- GET MESSAGES ----------------------------- */
 exports.getMessages = async (req, res) => {
   try {
     const { userId } = req.params;
     const currentUserId = req.user._id;
+
+    // 🔒 Block check before showing messages
+    const pairBlocked = await Block.exists({
+      $or: [
+        { blocker: currentUserId, blocked: userId },
+        { blocker: userId, blocked: currentUserId },
+      ],
+    });
+
+    // Hide all messages if the pair is blocked
+    if (pairBlocked) return res.json([]);
 
     const messages = await Message.find({
       $or: [
@@ -91,21 +119,21 @@ exports.getMessages = async (req, res) => {
       .populate("sender receiver", "name email")
       .sort({ createdAt: 1 });
 
-    // Decrypt message content
-    const decryptedMessages = messages.map((msg) => {
+    // 🔓 Decrypt message content
+    const decrypted = messages.map((msg) => {
       if (msg.content) {
         try {
           const bytes = CryptoJS.AES.decrypt(msg.content, SECRET_KEY);
-          const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-          msg.content = decrypted || msg.content;
-        } catch (err) {
+          const text = bytes.toString(CryptoJS.enc.Utf8);
+          msg.content = text || msg.content;
+        } catch {
           msg.content = msg.content;
         }
       }
       return msg;
     });
 
-    res.json(decryptedMessages);
+    res.json(decrypted);
   } catch (error) {
     console.error("❌ Error fetching messages:", error);
     res.status(500).json({ error: "Server error fetching messages" });

@@ -1,10 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../hooks/useAuth";
-import {
-  getMessages,
-  sendMessage,
-} from "../../services/messageService";
+import { getMessages, sendMessage } from "../../services/messageService";
 import {
   getGroupMessages,
   sendGroupMessage,
@@ -13,9 +10,17 @@ import {
   requestGroupJoin,
   manageJoinRequest,
 } from "../../services/groupService";
-import { ArrowLeft, MoreVertical, Search, Trash2, AlertTriangle, Ban } from "lucide-react";
+import {
+  ArrowLeft,
+  MoreVertical,
+  Search,
+  Trash2,
+  AlertTriangle,
+  Ban,
+} from "lucide-react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
+import { useNavigate } from "react-router-dom";
 import * as CryptoJS from "crypto-js";
 import api from "../../services/api";
 
@@ -30,9 +35,11 @@ export default function ChatWindow({ chat, onClose }) {
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newMember, setNewMember] = useState("");
+  const navigate = useNavigate();
   const menuRef = useRef(null);
 
-  const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || "default_secret_key";
+  const SECRET_KEY =
+    import.meta.env.VITE_ENCRYPTION_KEY || "default_secret_key";
 
   // 🔹 Load chat messages
   useEffect(() => {
@@ -77,14 +84,17 @@ export default function ChatWindow({ chat, onClose }) {
     if (!searchTerm.trim()) setFilteredMessages(messages);
     else {
       const q = searchTerm.toLowerCase();
-      setFilteredMessages(messages.filter((m) => m.content?.toLowerCase().includes(q)));
+      setFilteredMessages(
+        messages.filter((m) => m.content?.toLowerCase().includes(q))
+      );
     }
   }, [searchTerm, messages]);
 
   // Close menu on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target))
+        setMenuOpen(false);
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
@@ -112,7 +122,6 @@ export default function ChatWindow({ chat, onClose }) {
       console.error("❌ Send failed:", err);
     }
   };
-
   // ✅ File upload
   const handleFileSend = async (file) => {
     try {
@@ -139,13 +148,14 @@ export default function ChatWindow({ chat, onClose }) {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
-      setMessages((prev) => prev.map((msg) => (msg.tempId === tempId ? res.data : msg)));
+      setMessages((prev) =>
+        prev.map((msg) => (msg.tempId === tempId ? res.data : msg))
+      );
       socket.emit("message:send", res.data);
     } catch (err) {
       console.error("❌ File upload failed:", err);
     }
   };
-
   // ✅ Typing
   const handleTyping = (typing) => {
     if (chat.isGroup)
@@ -160,8 +170,7 @@ export default function ChatWindow({ chat, onClose }) {
         typing,
       });
   };
-
-  // ✅ Group Admin Functions
+  // ✅ Group Admin Functions - Add Member
   const handleAddMember = async (memberId) => {
     try {
       const res = await addGroupMember(chat._id, memberId);
@@ -171,7 +180,7 @@ export default function ChatWindow({ chat, onClose }) {
       alert("Failed to add member.");
     }
   };
-
+  // ✅ Group Admin Functions - Remove Member
   const handleRemoveMember = async (memberId) => {
     try {
       const res = await removeGroupMember(chat._id, memberId);
@@ -181,7 +190,6 @@ export default function ChatWindow({ chat, onClose }) {
       alert("Failed to remove member.");
     }
   };
-
   const handleJoinRequest = async () => {
     try {
       const res = await requestGroupJoin(chat._id);
@@ -191,7 +199,6 @@ export default function ChatWindow({ chat, onClose }) {
       alert("Failed to send join request.");
     }
   };
-
   const handleRequestAction = async (userId, action) => {
     try {
       const res = await manageJoinRequest(chat._id, userId, action);
@@ -201,7 +208,6 @@ export default function ChatWindow({ chat, onClose }) {
       alert("Failed to process join request.");
     }
   };
-
   // ✅ Clear / Report / Block
   const handleClearMessages = () => {
     if (window.confirm("Clear all messages?")) {
@@ -220,47 +226,45 @@ export default function ChatWindow({ chat, onClose }) {
   };
 
   if (loading)
-    return <div className="flex-1 flex items-center justify-center text-gray-400">Loading chat...</div>;
+    return (
+      <div className="flex-1 flex items-center justify-center text-gray-400">
+        Loading chat...
+      </div>
+    );
 
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
       {/* HEADER */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-white dark:bg-gray-800 relative">
-        <button onClick={onClose} className="text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+    <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-white dark:bg-gray-800 relative">
+      <button onClick={onClose} className="text-gray-600 hover:text-gray-900">
+        <ArrowLeft className="w-6 h-6" />
+      </button>
 
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
-          {chat.name.charAt(0).toUpperCase()}
-        </div>
-
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{chat.name}</h2>
-          {chat.isGroup && <p className="text-xs text-gray-500">Group Chat</p>}
-        </div>
-
-        <div className="relative" ref={menuRef}>
-          <button onClick={() => setMenuOpen((p) => !p)} className="text-gray-600 hover:text-gray-900">
-            <MoreVertical className="w-6 h-6" />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-8 w-44 bg-white dark:bg-gray-800 shadow-lg rounded-lg py-2 text-sm border border-gray-200 dark:border-gray-700 z-50">
-              <button onClick={() => setSearchMode((p) => !p)} className="flex items-center gap-2 px-3 py-2 w-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                <Search size={14} /> Search
-              </button>
-              <button onClick={handleClearMessages} className="flex items-center gap-2 px-3 py-2 w-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                <Trash2 size={14} /> Clear Chat
-              </button>
-              <button onClick={handleReport} className="flex items-center gap-2 px-3 py-2 w-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                <AlertTriangle size={14} /> Report
-              </button>
-              <button onClick={handleBlock} className="flex items-center gap-2 px-3 py-2 w-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                <Ban size={14} /> Block
-              </button>
-            </div>
-          )}
-        </div>
+      <div
+        className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold cursor-pointer"
+        onClick={() => {
+          if (!chat.isGroup) navigate(`/users/${chat._id}/info`);
+          else navigate(`/groups/${chat._id}/info`);
+        }}
+      >
+        {chat.name.charAt(0).toUpperCase()}
       </div>
+
+      <div
+        className="flex-1 cursor-pointer"
+        onClick={() => {
+          if (!chat.isGroup) navigate(`/users/${chat._id}/info`);
+          else navigate(`/groups/${chat._id}/info`);
+        }}
+      >
+        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600">
+          {chat.name}
+        </h2>
+        <p className="text-xs text-gray-500">
+          {chat.isGroup ? "Group Chat" : "Personal Chat"}
+        </p>
+      </div>
+    </div>
 
       {/* 🧩 GROUP MANAGEMENT */}
       {chat.isGroup && (
@@ -307,7 +311,9 @@ export default function ChatWindow({ chat, onClose }) {
 
               {chat.joinRequests?.length > 0 && (
                 <div className="mt-2 text-xs">
-                  <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Pending Requests:</h4>
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Pending Requests:
+                  </h4>
                   {chat.joinRequests.map((reqUser) => (
                     <div
                       key={reqUser._id}
@@ -316,13 +322,17 @@ export default function ChatWindow({ chat, onClose }) {
                       <span>{reqUser.name || reqUser.email}</span>
                       <div className="flex gap-1">
                         <button
-                          onClick={() => handleRequestAction(reqUser._id, "approve")}
+                          onClick={() =>
+                            handleRequestAction(reqUser._id, "approve")
+                          }
                           className="text-green-600 hover:underline text-xs"
                         >
                           Approve
                         </button>
                         <button
-                          onClick={() => handleRequestAction(reqUser._id, "reject")}
+                          onClick={() =>
+                            handleRequestAction(reqUser._id, "reject")
+                          }
                           className="text-red-600 hover:underline text-xs"
                         >
                           Reject
@@ -363,10 +373,18 @@ export default function ChatWindow({ chat, onClose }) {
       <MessageList messages={filteredMessages} currentUserId={user._id} />
 
       {/* TYPING */}
-      {isTyping && <div className="px-4 text-sm italic text-gray-500 animate-pulse">Someone is typing...</div>}
+      {isTyping && (
+        <div className="px-4 text-sm italic text-gray-500 animate-pulse">
+          Someone is typing...
+        </div>
+      )}
 
       {/* INPUT */}
-      <MessageInput onSend={handleSend} onTyping={handleTyping} onFileSend={handleFileSend} />
+      <MessageInput
+        onSend={handleSend}
+        onTyping={handleTyping}
+        onFileSend={handleFileSend}
+      />
     </div>
   );
 }

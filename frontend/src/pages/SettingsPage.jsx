@@ -47,7 +47,7 @@ const SettingsPage = () => {
 
         {/* Logout */}
         <button className="w-full py-2 bg-gradient-to-r from-red-500 to-red-700 text-white rounded-lg hover:opacity-90 transition">
-          Logout
+          De-Activate Account
         </button>
       </div>
     </div>

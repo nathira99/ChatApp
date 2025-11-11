@@ -1,22 +1,80 @@
-import React, { useContext } from "react";
-import { AuthContext } from "../../context/AuthContext";
+import { useState } from "react";
+import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { LogOut, User, Settings } from "lucide-react";
+import ProfilePage from "../../pages/ProfilePage";
 
 export default function Navbar() {
-  const { logout, user } = useContext(AuthContext);
+  const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  if (!user) return null;
+
+  const goToAdmin = () => {
+    navigate("/admin");
+    setOpen(false);
+  };
+
+  const goToUser = () => {
+    navigate("/");
+    setOpen(false);
+  };
 
   return (
-    <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center px-6 py-3 shadow-sm">
-      <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-        ChatApp
-      </h1>
-      <div className="flex items-center gap-4">
-        <span className="text-gray-700 dark:text-gray-200">{user?.name}</span>
+    <nav className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow">
+      <h1 className="text-lg font-semibold text-blue-600">ChatApp</h1>
+
+      <div className="relative">
         <button
-          onClick={logout}
-          className="px-3 py-1.5 text-sm bg-gradient-to-r from-red-500 to-red-700 text-white rounded-lg hover:opacity-90 transition"
+          onClick={() => setOpen(!open)}
+          className="font-medium text-gray-800 dark:text-gray-200 hover:text-blue-600 flex items-center gap-2"
         >
-          Logout
+          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+          {user.name}
         </button>
+
+        {open && (
+          <div className="absolute z-10 right-0 mt-2 bg-white dark:bg-gray-700 shadow-lg rounded-lg py-2 w-40 border border-gray-200 dark:border-gray-600">
+            <button
+              onClick={goToUser}
+              className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+            >
+              User View
+            </button>
+
+            {user.isAdmin && (
+              <button
+                onClick={goToAdmin}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+              >
+                Admin Panel
+              </button>
+            )}
+
+            <hr className="my-1 border-gray-300 dark:border-gray-600" />
+            <button
+            onClick={() => navigate("/profile")}
+            className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition"
+          >
+              <User size={18} /> Profile
+            </button>
+            <button
+            onClick={() => navigate("/settings")}
+            className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition"
+          >
+            <Settings size={18} /> Settings
+            </button>
+            <button
+              onClick={logout}
+            className="flex px-3 py-2 items-center text-red-600 gap-2 hover:opacity-90 transition"
+            >
+              <LogOut size={18} /> Logout
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

@@ -4,6 +4,7 @@ import Sidebar from "../components/sidebar/Sidebar";
 import ChatWindow from "../components/chat/ChatWindow";
 import Navbar from "../components/common/Navbar";
 import CreateGroup from "../components/group/CreateGroup";
+import { User,Group } from "lucide-react";
 
 export default function HomePage() {
   const [selectedChat, setSelectedChat] = useState(null);
@@ -62,26 +63,27 @@ export default function HomePage() {
           {/* Tabs */}
           <div className="flex border-b border-gray-200 dark:border-gray-700">
             <button
-              className={`flex-1 py-2 text-center font-medium ${
+              className={`flex items-center justify-center space-x-2 flex-1 py-2 text-center font-medium ${
                 activeTab === "users"
                   ? "text-blue-600 border-b-2 border-blue-600"
                   : "text-gray-500 hover:text-gray-700"
               }`}
               onClick={() => setActiveTab("users")}
             >
-              Users
+              <User size={18} /> <span> Users </span>
             </button>
             <button
-              className={`flex-1 py-2 text-center font-medium ${
+              className={`flex items-center justify-center space-x-2 flex-1 py-2 text-center font-medium ${
                 activeTab === "groups"
                   ? "text-blue-600 border-b-2 border-blue-600"
                   : "text-gray-500 hover:text-gray-700"
               }`}
               onClick={() => setActiveTab("groups")}
             >
-              Groups
+              <Group size={18} /> <span>Groups</span>
             </button>
           </div>
+          
 
           {/* User / Group List */}
           <div className="flex-1 overflow-y-auto">

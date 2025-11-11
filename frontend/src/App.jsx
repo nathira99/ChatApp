@@ -13,8 +13,16 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-import ForgotPassword from "./components/auth/ForgotPassword";
-import ResetPassword from "./components/auth/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import AdminRoute from "./pages/routes/AdminRoute";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminGroups from "./pages/admin/AdminGroup";
+import AdminReports from "./pages/admin/AdminReports";
+import UserInfo from "./pages/UserInfo";
+import GroupInfo from "./pages/groups/GroupInfo";
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -29,8 +37,11 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify/:token" element={<VerifyEmail />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
+            <Route path="/users/:id/info" element={<UserInfo />} />
+            <Route path="/groups/:id/info" element={<GroupInfo />} />
 
             <Route
               path="/"
@@ -56,6 +67,26 @@ export default function App() {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            >
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="groups" element={<AdminGroups />} />
+              <Route path="reports" element={<AdminReports />} />
+            </Route>
             <Route
               path="/settings"
               element={

@@ -1,16 +1,30 @@
-# React + Vite
+ successfully
+node:internal/modules/cjs/loader:1404
+  throw err;
+  ^
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Error: Cannot find module '../middleware/adminMiddleware'
+Require stack:
+- D:\Software\Visual Studio\ChatApp\backend\routes\adminRoutes.js    
+- D:\Software\Visual Studio\ChatApp\backend\server.js
+    at Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1057:19) 
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)
+    at Function._load (node:internal/modules/cjs/loader:1211:37)     
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)    
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)      
+    at Module.require (node:internal/modules/cjs/loader:1487:12)     
+    at require (node:internal/modules/helpers:135:16)
+    at Object.<anonymous> (D:\Software\Visual 
+Studio\ChatApp\backend\routes\adminRoutes.js:5:21)
+    at Module._compile 
+(node:internal/modules/cjs/loader:1730:14) {  
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [      
+    'D:\\Software\\Visual Studio\\ChatApp\\backend\\routes\\adminRoutes.js',
+    'D:\\Software\\Visual Studio\\ChatApp\\backend\\server.js'       
+  ]
+}
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Node.js v22.16.0       
+[nodemon] app crashed - waiting for file changes before starting...  

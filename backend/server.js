@@ -59,6 +59,7 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/messages", require("./routes/messageRoutes"));
 app.use("/api/groups", require("./routes/groupRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes"));
 
 // ✅ Server start
 const PORT = process.env.PORT || 5000;
