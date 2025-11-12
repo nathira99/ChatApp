@@ -9,7 +9,7 @@ export default function AdminSidebar() {
     }`;
 
   return (
-    <aside className="w-56 h-svh bg-white border-r border-gray-200 p-4 space-y-2 max-sm:border-b max-sm:w-full max-sm:flex max-xs:gap-2 max-sm:gap-2 max-sm:items-center max-sm:justify-center">
+    <aside className="w-56 h-svh bg-white border-r border-gray-200 p-4 space-y-2 max-sm:border-b max-sm:w-full max-sm:h-auto max-sm:flex max-xs:gap-2 max-sm:gap-2 max-sm:items-center max-sm:justify-center">
       <h2 className="font-bold  text-lg mb-3 max-sm:flex-1 max-sm:items-center">Admin Dashboard</h2>
       <NavLink to="/admin/users" className={linkClasses}>
         <User2 size={18} /><span>Users</span>

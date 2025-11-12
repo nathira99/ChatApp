@@ -7,16 +7,11 @@ import {
   sendGroupMessage,
   addGroupMember,
   removeGroupMember,
-  requestGroupJoin,
-  manageJoinRequest,
+  getGroupDetails,
 } from "../../services/groupService";
 import {
   ArrowLeft,
-  MoreVertical,
   Search,
-  Trash2,
-  AlertTriangle,
-  Ban,
 } from "lucide-react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
@@ -31,20 +26,15 @@ export default function ChatWindow({ chat, onClose }) {
   const [filteredMessages, setFilteredMessages] = useState([]);
   const [searchMode, setSearchMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newMember, setNewMember] = useState("");
   const navigate = useNavigate();
-  const menuRef = useRef(null);
-
-  const SECRET_KEY =
-    import.meta.env.VITE_ENCRYPTION_KEY || "default_secret_key";
+  const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || "default_secret_key";
 
   // 🔹 Load chat messages
   useEffect(() => {
     if (!chat || !user) return;
-
     const loadMessages = async () => {
       setLoading(true);
       try {
@@ -90,16 +80,6 @@ export default function ChatWindow({ chat, onClose }) {
     }
   }, [searchTerm, messages]);
 
-  // Close menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target))
-        setMenuOpen(false);
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
   // ✅ Send message
   const handleSend = async (content) => {
     if (!content.trim()) return;
@@ -116,21 +96,19 @@ export default function ChatWindow({ chat, onClose }) {
       const bytes = CryptoJS.AES.decrypt(newMsg.content, SECRET_KEY);
       const dec = bytes.toString(CryptoJS.enc.Utf8);
       const cleanMsg = { ...newMsg, content: dec || content };
-
       setMessages((prev) => [...prev, cleanMsg]);
     } catch (err) {
       console.error("❌ Send failed:", err);
     }
   };
+
   // ✅ File upload
   const handleFileSend = async (file) => {
     try {
       const tempId = Date.now().toString();
       const previewUrl = URL.createObjectURL(file);
-
       const tempMsg = {
         _id: tempId,
-        tempId,
         sender: { _id: user._id, name: user.name },
         fileUrl: previewUrl,
         fileType: file.type,
@@ -145,17 +123,18 @@ export default function ChatWindow({ chat, onClose }) {
       formData.append("receiverId", chat._id);
 
       const res = await api.post("/messages/upload", formData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")} `},
       });
 
       setMessages((prev) =>
-        prev.map((msg) => (msg.tempId === tempId ? res.data : msg))
+        prev.map((msg) => (msg._id === tempId ? res.data : msg))
       );
       socket.emit("message:send", res.data);
     } catch (err) {
       console.error("❌ File upload failed:", err);
     }
   };
+
   // ✅ Typing
   const handleTyping = (typing) => {
     if (chat.isGroup)
@@ -170,60 +149,41 @@ export default function ChatWindow({ chat, onClose }) {
         typing,
       });
   };
-  // ✅ Group Admin Functions - Add Member
-  const handleAddMember = async (memberId) => {
-    try {
-      const res = await addGroupMember(chat._id, memberId);
-      alert(res.message);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to add member.");
+const handleAddMember = async (memberIdOrEmail) => {
+  try {
+    const userId = memberIdOrEmail; // require userId here
+    const result = await addGroupMember(chat._id, userId);
+    // result.group holds populated group per backend above
+    // update local chat object so members/admins reflect immediately
+    if (result.group) {
+      // if chat is from parent, call a parent updater; otherwise update local state:
+      setChat?.(result.group); // if parent provided setter
+      chat.members = result.group.members;
+      chat.admins = result.group.admins;
+      setMessages((m) => [...m]); // trigger rerender if needed
     }
-  };
-  // ✅ Group Admin Functions - Remove Member
-  const handleRemoveMember = async (memberId) => {
-    try {
-      const res = await removeGroupMember(chat._id, memberId);
-      alert(res.message);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to remove member.");
+    alert(result.message || "Member added");
+    setNewMember("");
+  } catch (err) {
+    console.error("Add member failed:", err);
+    alert(err.response?.data?.message || err.message || "Failed to add member");
+  }
+};
+
+const handleRemoveMember = async (userId) => {
+  try {
+    const result = await removeGroupMember(chat._id, userId);
+    if (result.group) {
+      setChat?.(result.group);
+      chat.members = result.group.members;
+      chat.admins = result.group.admins;
     }
-  };
-  const handleJoinRequest = async () => {
-    try {
-      const res = await requestGroupJoin(chat._id);
-      alert(res.message);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to send join request.");
-    }
-  };
-  const handleRequestAction = async (userId, action) => {
-    try {
-      const res = await manageJoinRequest(chat._id, userId, action);
-      alert(res.message);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to process join request.");
-    }
-  };
-  // ✅ Clear / Report / Block
-  const handleClearMessages = () => {
-    if (window.confirm("Clear all messages?")) {
-      setMessages([]);
-      setFilteredMessages([]);
-    }
-    setMenuOpen(false);
-  };
-  const handleBlock = () => {
-    alert(`Blocked ${chat.name}`);
-    setMenuOpen(false);
-  };
-  const handleReport = () => {
-    alert(`Reported ${chat.name}`);
-    setMenuOpen(false);
-  };
+    alert(result.message || "Member removed");
+  } catch (err) {
+    console.error("Remove member failed:", err);
+    alert(err.response?.data?.message || err.message || "Failed to remove member");
+  }
+};
 
   if (loading)
     return (
@@ -235,44 +195,42 @@ export default function ChatWindow({ chat, onClose }) {
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
       {/* HEADER */}
-    <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-white dark:bg-gray-800 relative">
-      <button onClick={onClose} className="text-gray-600 hover:text-gray-900">
-        <ArrowLeft className="w-6 h-6" />
-      </button>
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3 bg-white dark:bg-gray-800">
+        <button onClick={onClose} className="text-gray-600 hover:text-gray-900">
+          <ArrowLeft className="w-6 h-6" />
+        </button>
 
-      <div
-        className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold cursor-pointer"
-        onClick={() => {
-          if (!chat.isGroup) navigate(`/users/${chat._id}/info`);
-          else navigate(`/groups/${chat._id}/info`);
-        }}
-      >
-        {chat.name.charAt(0).toUpperCase()}
-      </div>
+        <div
+          className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold cursor-pointer"
+          onClick={() =>
+            navigate(chat.isGroup ? `/groups/${chat._id}/info` : `/users/${chat._id}/info`)
+          }
+        >
+          {chat.name.charAt(0).toUpperCase()}
+        </div>
 
-      <div
-        className="flex-1 cursor-pointer"
-        onClick={() => {
-          if (!chat.isGroup) navigate(`/users/${chat._id}/info`);
-          else navigate(`/groups/${chat._id}/info`);
-        }}
-      >
-        <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600">
-          {chat.name}
-        </h2>
-        <p className="text-xs text-gray-500">
-          {chat.isGroup ? "Group Chat" : "Personal Chat"}
-        </p>
+        <div
+          className="flex-1 cursor-pointer"
+          onClick={() =>
+            navigate(chat.isGroup ? `/groups/${chat._id}/info` : `/users/${chat._id}/info`)
+          }
+        >
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 hover:text-blue-600">
+            {chat.name}
+          </h2>
+          <p className="text-xs text-gray-500">
+            {chat.isGroup ? "Group Chat" : "Personal Chat"}
+          </p>
+        </div>
       </div>
-    </div>
 
       {/* 🧩 GROUP MANAGEMENT */}
       {chat.isGroup && (
         <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-          {chat.admins?.includes(user._id) ? (
+          {chat.admins?.includes(user._id) && (
             <div>
               <h3 className="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                🧑‍💼 Group Management
+                Group Management
               </h3>
 
               <div className="flex items-center gap-2 mb-2">
@@ -291,7 +249,7 @@ export default function ChatWindow({ chat, onClose }) {
                 </button>
               </div>
 
-              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+              <div className="text-xs text-gray-600 dark:text-gray-400">
                 Members:
                 {chat.members?.map((m) => (
                   <span
@@ -308,49 +266,6 @@ export default function ChatWindow({ chat, onClose }) {
                   </span>
                 ))}
               </div>
-
-              {chat.joinRequests?.length > 0 && (
-                <div className="mt-2 text-xs">
-                  <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Pending Requests:
-                  </h4>
-                  {chat.joinRequests.map((reqUser) => (
-                    <div
-                      key={reqUser._id}
-                      className="flex justify-between items-center bg-gray-100 dark:bg-gray-800 p-2 rounded mb-1"
-                    >
-                      <span>{reqUser.name || reqUser.email}</span>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() =>
-                            handleRequestAction(reqUser._id, "approve")
-                          }
-                          className="text-green-600 hover:underline text-xs"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleRequestAction(reqUser._id, "reject")
-                          }
-                          className="text-red-600 hover:underline text-xs"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center">
-              <button
-                onClick={handleJoinRequest}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700"
-              >
-                🙋 Request to Join Group
-              </button>
             </div>
           )}
         </div>

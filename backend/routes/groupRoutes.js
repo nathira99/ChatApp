@@ -1,23 +1,11 @@
+// backend/routes/groupRoutes.js
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const { protect } = require("../middleware/authMiddleware");
-const {
-  createGroup,
-  getGroups,
-  sendGroupMessage,
-  getGroupMessages,
-  getGroupDetails,
-  addMember,
-  removeMember,
-  exitGroup,
-  deleteGroup,
-  requestJoin,
-  handleJoinRequest,
-  uploadGroupFile,
-} = require("../controllers/groupController");
+const groupController = require("../controllers/groupController");
 
-// 🔹 Multer setup for group file uploads
+// multer storage (same as you used)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) =>
@@ -25,34 +13,32 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// ✅ Create new group
-router.post("/", protect, createGroup);
+// Create, list
+router.post("/", protect, groupController.createGroup);
+router.get("/", protect, groupController.getGroups);
 
-// ✅ Fetch all groups for the logged-in user
-router.get("/", protect, getGroups);
+// Group detail / update / delete / exit
+router.get("/:id", protect, groupController.getGroupDetails);
+router.put("/:id", protect, groupController.updateGroup);
+router.delete("/:id", protect, groupController.deleteGroup);
+router.post("/:id/exit", protect, groupController.exitGroup);
 
-// ✅ Get details of one group
-router.get("/:id", protect, getGroupDetails);
+// group messages
+router.get("/:groupId/messages", protect, groupController.getGroupMessages);
+router.post("/:groupId/messages", protect, groupController.sendGroupMessage);
 
-// ✅ Delete group (creator only)
-router.delete("/:id", protect, deleteGroup);
+// membership operations (use :groupId to be explicit)
+router.post("/:groupId/add-member", protect, groupController.addMember);
+router.post("/:groupId/remove-member", protect, groupController.removeMember);
+// router.post("/:groupId/join", protect, groupController.requestJoin);
+// router.post("/:groupId/manage-request", protect, groupController.handleJoinRequest);
 
-// ✅ Exit group (any member)
-router.post("/:id/exit", protect, exitGroup);
-
-// ✅ Add or remove members
-router.post("/:groupId/add-member", protect, addMember);
-router.delete("/:groupId/remove-member/:memberId", protect, removeMember);
-
-// ✅ Join request system
-router.post("/:groupId/join", protect, requestJoin);
-router.post("/:groupId/manage-request", protect, handleJoinRequest);
-
-// ✅ Group messages
-router.get("/:groupId/messages", protect, getGroupMessages);
-router.post("/:groupId/messages", protect, sendGroupMessage);
-
-// ✅ Upload a file to the group chat
-router.post("/:groupId/upload", protect, upload.single("file"), uploadGroupFile);
+// upload file to group
+router.post(
+  "/:groupId/upload",
+  protect,
+  upload.single("file"),
+  groupController.uploadGroupFile
+);
 
 module.exports = router;

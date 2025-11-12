@@ -60,6 +60,14 @@ export default function App() {
               }
             />
             <Route
+              path="/groups/:id/info"
+              element={
+                <PrivateRoute>
+                  <GroupInfo />
+                </PrivateRoute>
+              }
+            />
+            <Route
               path="/profile"
               element={
                 <PrivateRoute>

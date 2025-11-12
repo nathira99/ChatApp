@@ -4,7 +4,7 @@ import Sidebar from "../components/sidebar/Sidebar";
 import ChatWindow from "../components/chat/ChatWindow";
 import Navbar from "../components/common/Navbar";
 import CreateGroup from "../components/group/CreateGroup";
-import { User,Group } from "lucide-react";
+import { User, Group } from "lucide-react";
 
 export default function HomePage() {
   const [selectedChat, setSelectedChat] = useState(null);
@@ -83,7 +83,6 @@ export default function HomePage() {
               <Group size={18} /> <span>Groups</span>
             </button>
           </div>
-          
 
           {/* User / Group List */}
           <div className="flex-1 overflow-y-auto">
@@ -100,23 +99,65 @@ export default function HomePage() {
                 </button>
 
                 {/* Group List */}
+                {/* Group List */}
                 {groups.length > 0 ? (
-                  groups.map((group) => (
-                    <div
-                      key={group._id}
-                      onClick={() =>
-                        handleSelectChat({ ...group, isGroup: true })
-                      }
-                      className="p-3 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                    >
-                      <p className="font-semibold text-gray-800 dark:text-gray-200">
-                        {group.name}
-                      </p>
-                      <p className="text-sm text-gray-500">{group.description}</p>
-                    </div>
-                  ))
+                  groups.map((group) => {
+                    const unread = group.unreadCount || 0;
+                    const isAdmin = group.admins?.some(
+                      (a) =>
+                        a._id === JSON.parse(localStorage.getItem("user"))?._id
+                    );
+
+                    return (
+                      <div
+                        key={group._id}
+                        onClick={() =>
+                          handleSelectChat({ ...group, isGroup: true })
+                        }
+                        className="flex items-center justify-between gap-2 p-3 rounded-lg cursor-pointer transition-all hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <div className="flex items-center gap-3">
+                          {group.imageUrl ? (
+                            <img
+                              src={group.imageUrl}
+                              alt={group.name}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm">
+                              {group.name[0]?.toUpperCase() || "G"}
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                              {group.name}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              {isAdmin && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 font-semibold">
+                                  Admin
+                                </span>
+                              )}
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate w-40">
+                                {group.description || "No description"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Unread badge */}
+                        {unread > 0 && (
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-600 text-white">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
                 ) : (
-                  <p className="text-center text-gray-500 mt-6">No groups found</p>
+                  <p className="text-center text-gray-500 mt-6">
+                    No groups found
+                  </p>
                 )}
               </div>
             )}
@@ -126,10 +167,14 @@ export default function HomePage() {
         {/* Chat Window */}
         <div className="flex-1 flex flex-col">
           {selectedChat ? (
-            <ChatWindow chat={selectedChat} onClose={() => setSelectedChat(null)} />
+            <ChatWindow
+              chat={selectedChat}
+              onClose={() => setSelectedChat(null)}
+            />
           ) : (
             <div className="flex flex-1 items-center justify-center text-gray-500 text-lg">
-              Select a {activeTab === "users" ? "user" : "group"} to start chatting 💬
+              Select a {activeTab === "users" ? "user" : "group"} to start
+              chatting 💬
             </div>
           )}
         </div>

@@ -1,188 +1,292 @@
 const { Server } = require("socket.io");
 const Group = require("../models/Group");
 const Message = require("../models/Message");
+const User = require("../models/User");
+const path = require("path");
+const fs = require("fs");
 
 let ioInstance = null;
 exports.setIO = (io) => {
   ioInstance = io;
 };
 
-// ✅ Admin adds a member
-exports.addMember = async (req, res) => {
-  try {
-    const { groupId } = req.params;
-    const { memberId } = req.body;
+// 🧾 Helper: add audit log to group
+async function pushAudit(groupId, action, by, meta = {}) {
+  await Group.findByIdAndUpdate(groupId, {
+    $push: { audit: { action, by, meta } },
+  });
+}
 
-    const group = await Group.findById(groupId);
-    if (!group) return res.status(404).json({ message: "Group not found" });
-
-    // only admin can add
-    if (!group.admins.includes(req.user._id))
-      return res.status(403).json({ message: "Only admin can add members" });
-
-    if (group.members.includes(memberId))
-      return res.status(400).json({ message: "User already in group" });
-
-    group.members.push(memberId);
-    await group.save();
-
-    res.status(200).json({ message: "Member added successfully", group });
-  } catch (err) {
-    console.error("Add member error:", err);
-    res.status(500).json({ message: "Server error adding member" });
-  }
-};
-// ❌ Remove member (admin or creator only)
-exports.removeMember = async (req, res) => {
-  try {
-    const { groupId, memberId } = req.params;
-    const group = await Group.findById(groupId);
-
-    if (!group) return res.status(404).json({ message: "Group not found" });
-    if (!group.creator.equals(req.user._id) && !group.admins.includes(req.user._id))
-      return res.status(403).json({ message: "Not authorized" });
-
-    group.members.pull(memberId);
-    group.admins.pull(memberId);
-    await group.save();
-    res.json({ message: "Member removed" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-// ✅ User requests to join group
-exports.requestJoin = async (req, res) => {
-  try {
-    const { groupId } = req.params;
-    const group = await Group.findById(groupId);
-    if (!group) return res.status(404).json({ message: "Group not found" });
-
-    if (group.members.includes(req.user._id))
-      return res.status(400).json({ message: "Already a member" });
-
-    if (group.joinRequests.includes(req.user._id))
-      return res.status(400).json({ message: "Already requested" });
-
-    group.joinRequests.push(req.user._id);
-    await group.save();
-
-    res.status(200).json({ message: "Join request sent successfully" });
-  } catch (err) {
-    console.error("Join request error:", err);
-    res.status(500).json({ message: "Server error sending join request" });
-  }
-};
-// ✅ Admin approves or rejects join request
-exports.handleJoinRequest = async (req, res) => {
-  try {
-    const { groupId } = req.params;
-    const { userId, action } = req.body; // action = "approve" | "reject"
-
-    const group = await Group.findById(groupId);
-    if (!group) return res.status(404).json({ message: "Group not found" });
-
-    if (!group.admins.includes(req.user._id))
-      return res.status(403).json({ message: "Only admin can manage requests" });
-
-    group.joinRequests = group.joinRequests.filter(
-      (u) => u.toString() !== userId.toString()
-    );
-
-    if (action === "approve") group.members.push(userId);
-
-    await group.save();
-
-    res.status(200).json({
-      message:
-        action === "approve"
-          ? "Join request approved"
-          : "Join request rejected",
-      group,
-    });
-  } catch (err) {
-    console.error("Join approval error:", err);
-    res.status(500).json({ message: "Server error managing join request" });
-  }
-};
-// ✅ Get all groups where user is a member
-exports.getGroups = async (req, res) => {
-  try {
-    // If user is not defined (no token), show all for now
-    const groups = req.user
-      ? await Group.find({ members: req.user._id })
-          .populate("members", "name email")
-          .sort({ createdAt: -1 })
-      : await Group.find().populate("members", "name email").sort({ createdAt: -1 });
-
-    res.status(200).json(groups);
-  } catch (err) {
-    console.error("Error fetching groups:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
 // ✅ Create a new group
 exports.createGroup = async (req, res) => {
   try {
-    const { name, description, members=[], isPrivate } = req.body;
+    const { name, description = "", members = [], isPrivate = false } = req.body;
+    if (!name) return res.status(400).json({ message: "Group name is required" });
 
-    if (!name ) {
-      return res.status(400).json({ message: "Group Name required" });
-    }
+    const creatorId = req.user._id.toString();
+    const uniqueMembers = Array.from(new Set([...members, creatorId]));
+
     const group = await Group.create({
       name,
       description,
-      members: [...new Set([...members, req.user._id])],
-      admins: [req.user._id],
-      creator: req.user._id,
+      creator: creatorId,
+      admins: [creatorId],
+      members: uniqueMembers,
       isPrivate,
     });
-    
-    const populated = await group.populate("creator members admins", "name email");
 
+    await pushAudit(group._id, "create_group", req.user._id, { name });
     res.status(201).json(group);
   } catch (err) {
     console.error("Error creating group:", err);
     res.status(500).json({ message: "Server error creating group" });
   }
 };
-// ✅ Get Group Messages
-exports.getGroupMessages = async (req, res) => {
+
+// ✅ Get all groups visible to the logged-in user
+exports.getGroups = async (req, res) => {
   try {
-    const { groupId } = req.params;
-    const messages = await Message.find({ group: groupId })
-      .populate("sender", "name email")
-      .sort({ createdAt: 1 });
-    res.json(messages);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const userId = req.user._id;
+    const groups = await Group.find({
+      $and: [
+        { deleted: false },
+        {
+          $or: [{ isPrivate: false }, { members: userId }, { creator: userId }],
+        },
+      ],
+    })
+      .populate("creator members admins", "name email")
+      .sort({ updatedAt: -1 });
+
+    res.json(groups);
+  } catch (err) {
+    console.error("Error fetching groups:", err);
+    res.status(500).json({ message: "Error fetching groups" });
   }
 };
-// ✅ Send Group Message
-exports.sendGroupMessage = async (req, res) => {
+
+// ✅ Get group details
+exports.getGroupDetails = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id).populate(
+      "creator members admins",
+      "name email"
+    );
+    if (!group) return res.status(404).json({ message: "Group not found" });
+    res.json(group);
+  } catch (err) {
+    console.error("Error loading group:", err);
+    res.status(500).json({ message: "Error loading group" });
+  }
+};
+
+// ✅ Update name, description or image (admins only)
+exports.updateGroup = async (req, res) => {
+  try {
+    const { name, description, imageUrl } = req.body;
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    if (!group.admins.includes(req.user._id))
+      return res.status(403).json({ message: "Admins only" });
+
+    if (name) group.name = name;
+    if (description) group.description = description;
+    if (imageUrl) group.imageUrl = imageUrl;
+    await group.save();
+    await pushAudit(group._id, "update_group", req.user._id, { name, description });
+
+    res.json(group);
+  } catch (err) {
+    console.error("Error updating group:", err);
+    res.status(500).json({ message: "Error updating group" });
+  }
+};
+
+// Helper: string-safe membership check
+const includesId = (arr, id) =>
+  arr.some((x) => x?.toString?.() === id.toString?.());
+
+exports.addMember = async (req, res) => {
   try {
     const { groupId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) return res.status(400).json({ message: "userId is required" });
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    // only admin can add members
+    if (!group.admins.includes(req.user._id.toString())) {
+      return res.status(403).json({ message: "Only admins can add members" });
+    }
+
+    // check if already in group
+    if (group.members.includes(userId)) {
+      return res.status(400).json({ message: "User already in group" });
+    }
+
+    // ensure user exists
+    const userToAdd = await User.findById(userId);
+    if (!userToAdd) return res.status(404).json({ message: "User not found" });
+
+    group.members.push(userId);
+    await group.save();
+
+    const updatedGroup = await Group.findById(groupId)
+      .populate("members", "name email")
+      .populate("admins", "name email");
+
+    res.json({ message: "Member added successfully", group: updatedGroup });
+  } catch (err) {
+    console.error("Add member error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Remove member (admins only)
+exports.removeMember = async (req, res) => {
+  try {
+    const { userId } = req.body; // IMPORTANT: frontend must send { userId }
+    const { groupId } = req.params;
+    if (!userId) return res.status(400).json({ message: "userId required" });
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    if (!includesId(group.admins, req.user._id))
+      return res.status(403).json({ message: "Admins only" });
+
+    group.members = group.members.filter((m) => m.toString() !== userId.toString());
+    group.admins = group.admins.filter((a) => a.toString() !== userId.toString());
+
+    // If removing creator, transfer if needed
+    if (group.creator.toString() === userId.toString()) {
+      if (group.members.length > 0) {
+        group.creator = group.members[0];
+        if (!includesId(group.admins, group.creator)) group.admins.push(group.creator);
+      } else {
+        // no members left — soft-delete group
+        group.deleted = true;
+      }
+    }
+
+    await group.save();
+    await pushAudit(group._id, "remove_member", req.user._id, { userId });
+
+    const populated = await Group.findById(groupId).populate("members admins creator", "name email");
+    res.json({ message: "Member removed", group: populated });
+  } catch (err) {
+    console.error("Error removing member:", err);
+    res.status(500).json({ message: "Error removing member" });
+  }
+};
+
+// ✅ Exit group (any member)
+exports.exitGroup = async (req, res) => {
+  try {
+    const userId = req.user._id.toString();
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    group.members = group.members.filter((m) => m.toString() !== userId);
+    group.admins = group.admins.filter((a) => a.toString() !== userId);
+
+    // Auto-transfer admin if creator exits
+    if (group.creator.toString() === userId && group.members.length > 0) {
+      group.creator = group.members[0];
+      group.admins.push(group.members[0]);
+    }
+
+    await group.save();
+    await pushAudit(group._id, "exit_group", req.user._id, {});
+    res.json({ message: "Exited group successfully" });
+  } catch (err) {
+    console.error("Error exiting group:", err);
+    res.status(500).json({ message: "Error exiting group" });
+  }
+};
+
+// ✅ Soft delete group (admins only)
+exports.deleteGroup = async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    if (!group.admins.includes(req.user._id))
+      return res.status(403).json({ message: "Admins only" });
+
+    group.deleted = true;
+    await group.save();
+    await pushAudit(group._id, "delete_group", req.user._id, {});
+    res.json({ message: "Group deleted (soft)" });
+  } catch (err) {
+    console.error("Error deleting group:", err);
+    res.status(500).json({ message: "Error deleting group" });
+  }
+};
+
+// ✅ Send group message
+exports.sendGroupMessage = async (req, res) => {
+  try {
     const { content } = req.body;
+    const groupId = req.params.groupId;
     const senderId = req.user._id;
-        console.log("📩 Sending group message", { groupId, content, senderId });
+
+    if (!content)
+      return res.status(400).json({ message: "Message content required" });
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    if (!group.members.includes(senderId))
+      return res.status(403).json({ message: "You are not a member of this group" });
 
     const message = await Message.create({
       sender: senderId,
       group: groupId,
       content,
+      type: "text",
     });
 
     const populated = await message.populate("sender", "name email");
 
-    // ✅ Emit message to group room globally
-    if (ioInstance) ioInstance.to(groupId).emit("group:message:receive", populated);
-    else console.log("⚠️ ioInstance is undefined!");
+    // Emit message via socket.io
+    if (req.io) {
+      req.io.to(groupId.toString()).emit("group:message", populated);
+    }
 
     res.status(201).json(populated);
   } catch (err) {
-    console.error("❌ Group message error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error sending group message:", err);
+    res.status(500).json({ message: "Error sending message" });
   }
 };
+
+// ✅ Get group messages
+exports.getGroupMessages = async (req, res) => {
+  try {
+    const groupId = req.params.groupId;
+    const userId = req.user._id;
+
+    const group = await Group.findById(groupId);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    if (!group.members.includes(userId))
+      return res.status(403).json({ message: "You are not a member of this group" });
+
+    const messages = await Message.find({ group: groupId })
+      .populate("sender", "name email")
+      .sort({ createdAt: 1 });
+
+    res.json(messages);
+  } catch (err) {
+    console.error("Error fetching group messages:", err);
+    res.status(500).json({ message: "Error fetching group messages" });
+  }
+};
+
 exports.uploadGroupFile = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -207,55 +311,5 @@ exports.uploadGroupFile = async (req, res) => {
   } catch (err) {
     console.error("❌ Group file message error:", err);
     res.status(500).json({ error: "Server error uploading group file" });
-  }
-};
-// Get group details (with creator, members, admins)
-exports.getGroupDetails = async (req, res) => {
-  try {
-    const group = await Group.findById(req.params.id)
-      .populate("creator", "name email")
-      .populate("members", "name email")
-      .populate("admins", "name email");
-
-    if (!group) return res.status(404).json({ message: "Group not found" });
-    res.json(group);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-// Exit group (any member)
-exports.exitGroup = async (req, res) => {
-  try {
-    const group = await Group.findById(req.params.id);
-    if (!group) return res.status(404).json({ message: "Group not found" });
-
-    group.members.pull(req.user._id);
-    group.admins.pull(req.user._id);
-
-    // if creator exits, auto delete
-    if (group.creator.equals(req.user._id)) {
-      await group.deleteOne();
-      return res.json({ message: "Group deleted as creator exited" });
-    }
-
-    await group.save();
-    res.json({ message: "Exited group" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-// Delete group (creator only)
-exports.deleteGroup = async (req, res) => {
-  try {
-    const group = await Group.findById(req.params.id);
-    if (!group) return res.status(404).json({ message: "Group not found" });
-
-    if (!group.creator.equals(req.user._id))
-      return res.status(403).json({ message: "Only creator can delete group" });
-
-    await group.deleteOne();
-    res.json({ message: "Group deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
   }
 };

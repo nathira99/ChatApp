@@ -4,7 +4,7 @@ import api from "./api"; // ✅ pre-configured axios instance
 export const getGroups = async () => {
   const token = localStorage.getItem("token");
   const res = await api.get("/groups", {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: `Bearer ${token}`},
   });
   return res.data;
 };
@@ -20,6 +20,7 @@ export const createGroup = async (name, members, description = "") => {
   return res.data;
 };
 
+// ✅ Get messages from a group
 export const getGroupMessages = async (groupId) => {
   const token = localStorage.getItem("token");
   const res = await api.get(`/groups/${groupId}/messages`, {
@@ -28,6 +29,7 @@ export const getGroupMessages = async (groupId) => {
   return res.data;
 };
 
+// ✅ Send a message to a group
 export const sendGroupMessage = async (groupId, content) => {
   const token = localStorage.getItem("token");
   const res = await api.post(
@@ -38,34 +40,65 @@ export const sendGroupMessage = async (groupId, content) => {
   return res.data;
 };
 
-// ✅ Admin adds member
-export const addGroupMember = async (groupId, memberId) => {
-  const { data } = await api.post(`/groups/${groupId}/add-member`, { memberId });
+const tokenHeader = () => (
+  { 
+    headers: 
+    { Authorization: `Bearer("token")`}});
+
+// Admin adds member
+export const addGroupMember = async (groupId, userId) => {
+  if (!groupId || !userId) throw new Error("groupId and userId required");
+  const res = await api.post(`/groups/${groupId}/add-member`, { userId }, tokenHeader());
+  return res.data;
+};
+
+// Admin removes member
+export const removeGroupMember = async (groupId, userId) => {
+  if (!groupId || !userId) throw new Error("groupId and userId required");
+  const res = await api.post(`/groups/${groupId}/remove-member`, { userId }, tokenHeader());
+  return res.data;
+};
+
+// Get updated single group (useful after add/remove)
+export const getGroupDetails = async (groupId) => {
+  const res = await api.get(`/groups/${groupId}, tokenHeader()`);
+  return res.data;
+};
+
+export default {
+  addGroupMember,
+  removeGroupMember,
+  getGroupDetails,
+};
+
+// ✅ Exit group (any user)
+export const exitGroup = async (groupId) => {
+  const token = localStorage.getItem("token");
+  const { data } = await api.post(
+    `/groups/${groupId}/exit`,
+    {},
+    { headers: { Authorization: `Bearer ${token}`} }
+  );
   return data;
 };
 
-// ✅ Admin removes member
-export const removeGroupMember = async (groupId, memberId) => {
-  const { data } = await api.post(`/groups/${groupId}/remove-member`, { memberId });
-  return data;
-};
-
-// ✅ User requests to join
-export const requestGroupJoin = async (groupId) => {
-  const { data } = await api.post(`/groups/${groupId}/join`);
-  return data;
-};
-
-// ✅ Admin handles join request (approve/reject)
-export const manageJoinRequest = async (groupId, userId, action) => {
-  const { data } = await api.post(`/groups/${groupId}/manage-request`, { userId, action });
+// ✅ Delete group (admin only)
+export const deleteGroup = async (groupId) => {
+  const token = localStorage.getItem("token");
+  const { data } = await api.delete(`/groups/${groupId}`, {
+    headers: { Authorization: `Bearer ${token}`},
+  });
   return data;
 };
 
 export const groupService = {
-  getGroupDetails: (id) => api.get(`/groups/${id}`).then((res) => res.data),
-  removeMember: (groupId, memberId) =>
-    api.delete(`/groups/${groupId}/members/${memberId}`).then((res) => res.data),
-  exitGroup: (id) => api.post(`/groups/${id}/exit`).then((res) => res.data),
-  deleteGroup: (id) => api.delete(`/groups/${id}`).then((res) => res.data),
+  getGroups,
+  createGroup,
+  getGroupMessages,
+  sendGroupMessage,
+  addGroupMember,
+  removeGroupMember,
+  getGroupDetails,
+  exitGroup,
+  deleteGroup,
 };

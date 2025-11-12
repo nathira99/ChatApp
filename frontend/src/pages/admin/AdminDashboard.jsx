@@ -6,7 +6,7 @@ export default function AdminDashboard() {
   return (
     <>
       <Navbar className="fixed top-0 left-0 right-0" />
-      <div className="flex max-sm:flex-col">
+      <div className="flex max-sm:flex-col items-center justify-center">
       <AdminSidebar />
       <main className="flex-1 p-6 overflow-y-auto">
         <Outlet />

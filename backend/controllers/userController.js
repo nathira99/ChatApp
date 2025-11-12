@@ -28,3 +28,16 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: "Error deleting user" });
   }
 };
+exports.searchUsers = async (req, res) => {
+  try {
+    const query = req.query.query?.trim();
+    if (!query) return res.json([]);
+    const users = await User.find({
+      name: { $regex: query, $options: "i" },
+    }).select("name email");
+    res.json(users);
+  } catch (err) {
+    console.error("User search failed:", err);
+    res.status(500).json({ message: "Search error" });
+  }
+};
