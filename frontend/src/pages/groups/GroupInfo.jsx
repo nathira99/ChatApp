@@ -89,17 +89,24 @@ export default function GroupInfo() {
   };
 
   // ✅ Exit group
-  const handleExitGroup = async () => {
-    if (!window.confirm("Do you really want to exit this group?")) return;
-    try {
-      await api.post(`/groups/${group._id}`/exit);
-      alert("You exited the group.");
-      navigate("/");
-    } catch (err) {
-      console.error("Exit failed:", err);
-      setMsg({ type: "error", text: "Failed to exit group." });
-    }
-  };
+const handleExitGroup = async () => {
+  if (!window.confirm("Exit this group?")) return;
+  try {
+    await api.post(`/groups/${group._id}/exit`);
+    // ✅ Immediately remove this group from sidebar (local update)
+    const existingGroups = JSON.parse(localStorage.getItem("groups") || "[]");
+    const updatedGroups = existingGroups.filter((g) => g._id !== group._id);
+    localStorage.setItem("groups", JSON.stringify(updatedGroups));
+
+    // ✅ Optionally re-fetch from server for accuracy
+    // await getGroups();
+
+    navigate("/"); // move back to main view
+  } catch (err) {
+    console.error("Error exiting group:", err);
+    setMsg({ type: "error", text: "Failed to exit group." });
+  }
+};
 
   // ✅ Report group
   const handleReport = async () => {

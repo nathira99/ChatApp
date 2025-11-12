@@ -23,6 +23,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ✅ Initialize HTTP + Socket.io
 const server = createServer(app);

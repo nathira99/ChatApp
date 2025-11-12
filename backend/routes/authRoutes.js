@@ -1,5 +1,7 @@
 const express = require("express");
-const { register, login, logout, verifyEmail, forgotPassword, resetPassword, getMe } = require("../controllers/authController");
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
+const { register, login, logout, verifyEmail, forgotPassword, resetPassword, updateProfile, getProfile } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
@@ -10,6 +12,7 @@ router.post("/logout", protect, logout);
 router.get("/verify/:token", verifyEmail);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
-router.get("/profile", protect, getMe);
+router.get("/profile", protect, getProfile);
+router.put("/profile", protect, upload.single("avatar"), updateProfile);
 
 module.exports = router;

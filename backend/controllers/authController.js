@@ -205,7 +205,51 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server error resetting password" });
   }
 };
-// Get Current User
-exports.getMe = async (req, res) => {
-  res.json(req.user);
+
+// Update User Profile
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (req.body.name) user.name = req.body.name;
+    if (req.body.about) user.about = req.body.about;
+    if (req.body.status) user.status = req.body.status;
+    if (req.file) user.avatar = `/uploads/${req.file.filename}`;
+
+    await user.save();
+if (req.app.get("io")) {
+  req.app.get("io").emit("user:profile:update", {
+    _id: user._id,
+    name: user.name,
+    avatar: user.avatar,
+    status: user.status,
+    about: user.about,
+  });
+}
+    res.json({ message: "Profile updated", user });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ message: "Server error updating profile" });
+  }
+};
+
+// Get User Profile
+exports.getProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+    res.json({
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      about: req.user.about,
+      avatar: req.user.avatar,
+      status: req.user.status,
+    });
+  } catch (err) {
+    console.error("Profile fetch error:", err);
+    res.status(500).json({ message: "Server error fetching profile" });
+  }
 };
