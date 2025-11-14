@@ -1,10 +1,9 @@
 const Message = require("../models/Message");
+const Conversation = require("../models/Conversation");
 const Block = require("../models/Block");
 const CryptoJS = require("crypto-js");
+const SECRET_KEY = process.env.ENCRYPTION_KEY || "default_secret";
 
-const SECRET_KEY = process.env.ENCRYPTION_KEY || "default_secret_key";
-
-/* ----------------------------- SEND TEXT MESSAGE ----------------------------- */
 exports.sendMessage = async (req, res) => {
   try {
     const { receiverId, content } = req.body;
@@ -13,7 +12,7 @@ exports.sendMessage = async (req, res) => {
     if (!receiverId || !content)
       return res.status(400).json({ error: "Receiver and content are required." });
 
-    // 🔒 Check if chat between these two users is blocked
+    // 🔒 Check block
     const pairBlocked = await Block.exists({
       $or: [
         { blocker: senderId, blocked: receiverId },
@@ -23,18 +22,39 @@ exports.sendMessage = async (req, res) => {
     if (pairBlocked)
       return res.status(403).json({ error: "Messaging blocked between these users." });
 
-    // 🔐 Encrypt message before saving
+    // 🔐 Encrypt
     const encryptedContent = CryptoJS.AES.encrypt(content, SECRET_KEY).toString();
 
+    // Save message
     const message = await Message.create({
       sender: senderId,
       receiver: receiverId,
       content: encryptedContent,
     });
 
+    // 🔄 Find or create conversation
+    let conversation = await Conversation.findOne({
+      isGroup: false,
+      members: { $all: [senderId, receiverId] },
+    });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        isGroup: false,
+        members: [senderId, receiverId],
+      });
+    }
+
+    // 🆕 Update conversation summary
+    conversation.lastMessage = content; // store DECRYPTED TEXT only
+    conversation.lastMessageTime = new Date();
+    conversation.lastMessageSender = senderId.toString();
+
+    await conversation.save();
+
     const populated = await message.populate("sender receiver", "name email");
 
-    // 🔔 Emit real-time message if socket is attached
+    // 🔔 Emit new message
     if (req.io) req.io.to(receiverId.toString()).emit("message:receive", populated);
 
     res.status(201).json(populated);
@@ -137,5 +157,42 @@ exports.getMessages = async (req, res) => {
   } catch (error) {
     console.error("❌ Error fetching messages:", error);
     res.status(500).json({ error: "Server error fetching messages" });
+  }
+};
+
+/* --------------------------- CLEAR CHAT --------------------------- */
+exports.clearChat = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { otherUserId } = req.params;
+
+    if (!otherUserId)
+      return res.status(400).json({ message: "otherUserId required" });
+
+    // Delete messages where either user is sender or receiver
+    await Message.deleteMany({
+      $or: [
+        { sender: userId, receiver: otherUserId },
+        { sender: otherUserId, receiver: userId }
+      ]
+    });
+
+    // Reset conversation last message
+    await Conversation.findOneAndUpdate(
+      {
+        isGroup: false,
+        members: { $all: [userId, otherUserId] }
+      },
+      {
+        lastMessage: "",
+        lastMessageTime: null,
+        lastMessageSender: null
+      }
+    );
+
+    res.json({ message: "Chat cleared successfully" });
+  } catch (err) {
+    console.error("❌ Clear Chat Error:", err);
+    res.status(500).json({ message: "Failed to clear chat" });
   }
 };

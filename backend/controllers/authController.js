@@ -5,9 +5,16 @@ const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
 
 // Register
+// Register
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    // 🔥 VALIDATION FIX — missing in your code
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email and password are required" });
+    }
+
     const existing = await User.findOne({ email });
     if (existing)
       return res.status(400).json({ message: "User already exists" });
@@ -21,6 +28,7 @@ exports.register = async (req, res) => {
       verificationToken,
       verificationExpires: Date.now() + 10 * 60 * 1000,
     });
+
     const verifyUrl = `${process.env.FRONTEND_URL}/verify/${verificationToken}`;
 
 const html = `
@@ -51,12 +59,13 @@ const html = `
 </div>
 `;
 
-await sendEmail(user.email, "Verify Your ChatApp Account", html);
+    await sendEmail(user.email, "Verify Your ChatApp Account", html);
 
     res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
+      avatar: user.avatar,
       isAdmin: user.isAdmin,
       token: generateToken(user),
     });

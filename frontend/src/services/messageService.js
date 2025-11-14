@@ -35,3 +35,19 @@ export const uploadFileMessage = async (receiverId, file) => {
   });
   return res.data;
 };
+
+export const clearChat = (conversationId) => {
+  try {
+    const cleared = JSON.parse(localStorage.getItem("clearedChats") || "{}");
+
+    // store timestamp for conversation
+    cleared[conversationId] = Date.now();
+
+    localStorage.setItem("clearedChats", JSON.stringify(cleared));
+
+    return true;
+  } catch (error) {
+    console.error("ClearChat failed:", error);
+    return false;
+  }
+};

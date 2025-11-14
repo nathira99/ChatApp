@@ -34,6 +34,11 @@ const initSocket = (server) => {
       socket.emit("message:receive", data);
     });
 
+    socket.on("join", (userId) => {
+      socket.join(userId);
+      console.log(`👥 Joined chat: ${userId}`);
+    })
+
     // 👥 Group join & leave
     socket.on("join:group", (groupId) => {
       socket.join(groupId);

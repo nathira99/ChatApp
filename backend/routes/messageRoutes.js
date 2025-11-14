@@ -6,6 +6,7 @@ const {
   sendMessage,
   getMessages,
   sendFileMessage,
+  clearChat
 } = require("../controllers/messageController");
 
 // ✅ 1. Define where uploads go
@@ -39,5 +40,6 @@ const upload = multer({ storage, fileFilter });
 router.post("/", protect, sendMessage);
 router.get("/:userId", protect, getMessages);
 router.post("/upload", protect, upload.single("file"), sendFileMessage);
+router.delete("/clear", protect, clearChat);
 
 module.exports = router;

@@ -16,6 +16,7 @@ const upload = multer({ storage });
 // Create, list
 router.post("/", protect, groupController.createGroup);
 router.get("/", protect, groupController.getGroups);
+router.get("/my", protect, groupController.getMyGroups);
 
 // Group detail / update / delete / exit
 router.get("/:id", protect, groupController.getGroupDetails);

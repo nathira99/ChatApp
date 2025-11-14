@@ -24,6 +24,10 @@ const messageSchema = new mongoose.Schema(
       enum: ["text", "image", "video", "audio", "document", "file"],
       default: "text",
     },
+    conversation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Conversation",
+    },
   },
   { timestamps: true }
 );

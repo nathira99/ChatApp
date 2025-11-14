@@ -14,29 +14,36 @@ export default function Register() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setSuccessMsg("");
-    setErrorMsg("");
+  e.preventDefault();
+  setLoading(true);
+  setSuccessMsg("");
+  setErrorMsg("");
 
-    try {
-      const res = await authService.register(name, email, password);
-      setSuccessMsg(
-        res.message ||
-          "✅ Registration successful! Please check your email to verify your account before logging in."
-      );
-      setName("");
-      setEmail("");
-      setPassword("");
+  if (password !== confirmPassword) {
+    setErrorMsg("Passwords do not match.");
+    setLoading(false);
+    return;
+  }
 
-      // Optional redirect after short delay
-      setTimeout(() => navigate("/login"), 4000);
-    } catch (err) {
-      setErrorMsg(err.response?.data?.message || "Registration failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    await authService.register(name, email, password);
+
+    setSuccessMsg(
+      "✅ Registration successful! A verification link has been sent to your email."
+    );
+
+    setName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+
+    setTimeout(() => navigate("/login"), 3000);
+  } catch (err) {
+    setErrorMsg(err.response?.data?.message || "Registration failed.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">

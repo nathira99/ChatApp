@@ -18,6 +18,8 @@ const GroupSchema = new mongoose.Schema(
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     imageUrl: { type: String, default: "" },
     isPrivate: { type: Boolean, default: false },
+    lastMessage: { type: String, default: "" },
+    lastMessageAt: { type: Date },
     deleted: { type: Boolean, default: false }, // soft delete
     joinRequests: [
       {

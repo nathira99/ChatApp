@@ -16,6 +16,43 @@ async function pushAudit(groupId, action, by, meta = {}) {
     $push: { audit: { action, by, meta } },
   });
 }
+// GET groups where user is a member
+exports.getMyGroups = async (req, res) => {
+  try {
+    const groups = await Group.find({
+      members: req.user._id,
+      deleted: false
+    })
+      .select("name description members admins lastMessage lastMessageTime imageUrl")
+      .lean();
+
+    res.json(groups);
+  } catch (error) {
+    console.error("❌ getMyGroups error:", error);
+    res.status(500).json({ message: "Server error fetching groups" });
+  }
+};
+
+
+// CREATE group
+exports.createGroup = async (req, res) => {
+  try {
+    const { name, description } = req.body;
+
+    const group = await Group.create({
+      name,
+      description,
+      creator: req.user._id,
+      admins: [req.user._id],
+      members: [req.user._id],
+    });
+
+    res.json(group);
+  } catch (error) {
+    console.error("❌ createGroup error:", error);
+    res.status(500).json({ message: "Server error creating group" });
+  }
+};
 
 // ✅ Create a new group
 exports.createGroup = async (req, res) => {

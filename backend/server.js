@@ -62,6 +62,7 @@ app.use("/api/messages", require("./routes/messageRoutes"));
 app.use("/api/groups", require("./routes/groupRoutes"));
 app.use("/api/reports", require("./routes/reportRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/conversations", require("./routes/conversationRoutes"));
 
 // ✅ Server start
 const PORT = process.env.PORT || 5000;
