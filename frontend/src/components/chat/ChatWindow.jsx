@@ -185,7 +185,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
-            className="text-gray-600 hover:text-gray-900"
+            className="sm-hidden"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>

@@ -9,6 +9,8 @@ export default function HomePage() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [activeChat, setActiveChat] = useState(null);
   
   useEffect(() => {
     const handler = () => setShowCreateGroup(true);
@@ -17,6 +19,9 @@ export default function HomePage() {
   })
   const handleSelectChat = (chat) => {
   if (!chat) return;
+
+  setActiveChat(chat);
+  setShowSidebar(false);
 
   // If it's a direct chat with "otherUser" structure
   if (!chat.isGroup && chat.otherUser) {
@@ -51,6 +56,11 @@ export default function HomePage() {
     isGroup: true,
   });
 };
+
+  const handleCloseChat = () => {
+    setActiveChat(null);
+    setShowSidebar(true);
+  }
   
   const handleMessageUpdate = (chatId, lastMessage, isSender) => {
     setConversations(prev => 
@@ -69,27 +79,40 @@ export default function HomePage() {
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <Navbar />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className={`${activeChat ? "hidden sm-block": "block"} w-72`}>
         {/* Sidebar */}
+        {showSidebar && 
         <Sidebar 
         onSelectChat = {handleSelectChat}
         conversation = {conversations}
-        setConversations = {setConversations} />
+        setConversations = {setConversations}
+        onClose={() => setShowSidebar(false)}
+        />
+}
+      </div>
 
         {/* Chat Window */}
-        <div className="flex-1 flex flex-col">
-          {selectedChat ? (
-            <ChatWindow 
-            chat={selectedChat} 
-            onClose={() => setSelectedChat(null)} 
-            onMessageUpdate={handleMessageUpdate}/>
-          ) : (
-            <div className="flex flex-1 items-center justify-center text-gray-500 text-lg">
-              Select a chat to start messaging 💬
-            </div>
-          )}
-        </div>
+         <div className="flex-1 bg-gray-50 dark:bg-gray-900 hidden sm:flex items-center justify-center">
+
+        {activeChat ? (
+          <ChatWindow chat={activeChat} onClose={handleCloseChat} />
+        ) : (
+          <div className="text-gray-500 text-center px-4">
+            <h2 className="text-xl font-semibold mb-2">Welcome to ChatApp</h2>
+            <p className="text-sm">Select a conversation to start chatting</p>
+          </div>
+        )}
+
       </div>
+
+      {/* MOBILE CHAT WINDOW */}
+      {activeChat && (
+        <div className="flex-1 sm:hidden">
+          <ChatWindow chat={activeChat} onClose={handleCloseChat} />
+        </div>
+      )}
+
+
       {showCreateGroup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
