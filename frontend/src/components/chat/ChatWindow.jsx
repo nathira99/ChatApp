@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../hooks/useAuth";
-import { getMessages, sendMessage, clearChat } from "../../services/messageService";
+import {
+  getMessages,
+  sendMessage,
+  clearChat,
+} from "../../services/messageService";
 import {
   getGroupMessages,
   sendGroupMessage,
@@ -35,7 +39,8 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
   const searchRef = useRef(null);
   const navigate = useNavigate();
 
-  const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || "default_secret_key";
+  const SECRET_KEY =
+    import.meta.env.VITE_ENCRYPTION_KEY || "default_secret_key";
   const clearedOnceRef = useRef(false);
 
   // ------------------ CLOSE PANELS ON OUTSIDE CLICK ------------------
@@ -44,7 +49,11 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
       if (menuOpen && menuRef.current && !menuRef.current.contains(e.target))
         setMenuOpen(false);
 
-      if (searchMode && searchRef.current && !searchRef.current.contains(e.target)) {
+      if (
+        searchMode &&
+        searchRef.current &&
+        !searchRef.current.contains(e.target)
+      ) {
         setSearchMode(false);
         setSearchTerm("");
       }
@@ -72,7 +81,9 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
         }
 
         // check cleared timestamp
-        const cleared = JSON.parse(localStorage.getItem("clearedChats") || "{}");
+        const cleared = JSON.parse(
+          localStorage.getItem("clearedChats") || "{}"
+        );
         const clearTime = cleared[chat._id];
 
         // decrypt and filter
@@ -108,7 +119,9 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
     if (!searchTerm.trim()) setFilteredMessages(messages);
     else {
       const q = searchTerm.toLowerCase();
-      setFilteredMessages(messages.filter((m) => m.content?.toLowerCase().includes(q)));
+      setFilteredMessages(
+        messages.filter((m) => m.content?.toLowerCase().includes(q))
+      );
     }
   }, [searchTerm, messages]);
   // ----------------------------------------------------
@@ -131,8 +144,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
       const dec = bytes.toString(CryptoJS.enc.Utf8);
       const cleanMsg = { ...newMsg, content: dec || content };
 
-      if (onMessageUpdate)
-        onMessageUpdate(chat._id, cleanMsg.content, true);
+      if (onMessageUpdate) onMessageUpdate(chat._id, cleanMsg.content, true);
 
       setMessages((prev) => [...prev, cleanMsg]);
     } catch (err) {
@@ -169,34 +181,60 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
       {/* HEADER */}
-      <div className="p-4 border-b bg-white dark:bg-gray-800 flex items-center justify-between">
+      <div className="px-4 py-2 border-b bg-white dark:bg-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={onClose} className="text-gray-600 hover:text-gray-900">
+          <button
+            onClick={onClose}
+            className="text-gray-600 hover:text-gray-900"
+          >
             <ArrowLeft className="w-6 h-6" />
           </button>
 
           <div
-            className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white"
+            className="cursor-pointer inline-flex items-center gap-2"
             onClick={() =>
-              navigate(chat.isGroup ? `/groups/${chat._id}/info` : `/users/${chat._id}/info`)
+              navigate(
+                chat.isGroup
+                  ? `/groups/${chat._id}/info`
+                  : `/users/${chat._id}/info`
+              )
             }
           >
-            {chat?.name?.charAt(0)?.toUpperCase() || "?"}
-          </div>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white">
+              {chat?.name?.charAt(0)?.toUpperCase() || "?"}
+            </div>
 
-          <div>
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-              {chat?.name}
-            </h2>
-            <p className="text-xs text-gray-500">
-              {chat.isGroup ? "Group Chat" : "Personal Chat"}
-            </p>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                {chat?.name}
+
+                {chat.isGroup && chat.admins?.includes(user._id) && (
+                  <span className="text-[10px] bg-blue-600 text-white px-1 rounded">
+                    ADMIN
+                  </span>
+                )}
+              </h2>
+              <div className="text-xs text-gray-500">
+                {chat.isGroup ? (
+                  <span className="truncate block max-w-[200px]">
+                    {chat.members?.length
+                      ? chat.members.map((m) => m.name).join(", ")
+                      : "No members"}
+                  </span>
+                ) : (
+                  <span>Personal Chat</span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* MENU */}
         <div className="relative" ref={menuRef}>
-          <button onClick={() => setMenuOpen((p) => !p)} className="p-2 rounded-full">
+          <button
+            onClick={() => setMenuOpen((p) => !p)}
+            className="p-2 rounded-full"
+          >
             <MoreVertical className="w-5 h-5 text-gray-600" />
           </button>
 
@@ -252,7 +290,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
       )}
 
       {/* MESSAGES */}
-      <MessageList messages={filteredMessages} currentUserId={user._id} />
+      <MessageList messages={filteredMessages} currentUserId={user?._id} />
 
       {/* INPUT */}
       <MessageInput onSend={handleSend} onFileSend={handleFileSend} />

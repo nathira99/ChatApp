@@ -24,12 +24,14 @@ export default function Sidebar({ onSelectChat }) {
 
         // If conversation already shaped from backend:
         if (c.members && Array.isArray(c.members) && c.members.length > 0) {
-          const other = c.members.find((m) => m && String(m._id) !== String(myId));
+          const other = c.members.find(
+            (m) => m && String(m._id) !== String(myId)
+          );
           if (!other && !c.isGroup) return null;
 
           const name = c.isGroup ? c.name : other?.name || c.name || "Unknown";
           return {
-            _id: c._id || (other?._id),
+            _id: c._id || other?._id,
             isGroup: !!c.isGroup,
             otherUser: other
               ? {
@@ -61,9 +63,49 @@ export default function Sidebar({ onSelectChat }) {
           };
         }
 
+        // Group Chat case
+        if (c.isGroup) {
+          return {
+            _id: c._id,
+            isGroup: true,
+            name: c.name || "Group Chat",
+            lastMessage: c.lastMessage || "",
+            lastMessageSender: c.lastMessageSender || "",
+            lastMessageSenderName: c.lastMessageSenderName || "",
+            lastMessageTime: c.lastMessageTime || "",
+            imageUrl: c.imageUrl || "",
+          };
+        }
         return null;
       })
       .filter(Boolean);
+  };
+  // Normalize Groups separately (from getUserGroups API)
+  const normalizeGroups = (groups = []) => {
+    const myId = JSON.parse(localStorage.getItem("user"))._id;
+
+    return groups.map((g) => {
+      const isYou = String(g.lastMessageSender) === String(myId);
+
+      const preview = g.lastMessage
+        ? isYou
+          ? `You: ${g.lastMessage}`
+          : `$(g.lastMessageSenderName || "User"): ${g.lastMessage}`
+        : "No messages yet";
+
+        return {
+      _id: g._id,
+      isGroup: true,
+      name: g.name || "Group",
+      lastMessage: g.lastMessage || "",
+      lastMessageSender: g.lastMessageSender || "",
+      lastMessageSenderName: g.lastMessageSenderName || "",
+      lastMessagePreview: preview,
+      lastMessageTime: g.lastMessageTime || "",
+      imageUrl: g.imageUrl || "",
+      admins: g.admins || [],
+        };
+    });
   };
 
   const loadConversations = async () => {
@@ -80,15 +122,20 @@ export default function Sidebar({ onSelectChat }) {
 
   const loadGroups = async () => {
     try {
-      const g = await getUserGroups();
-      setGroups(g || []);
+      const raw = await getUserGroups();
+      const normalized = normalizeGroups(raw);
+      setGroups(normalized);
     } catch (err) {
       console.error("Failed loading groups", err);
       setGroups([]);
     }
   };
+
   const handleNewConversationCreated = (convo) => {
-    setConversations((prev) => [convo, ...prev.filter((c) => c._id !== convo._id)]);
+    setConversations((prev) => [
+      convo,
+      ...prev.filter((c) => c._id !== convo._id),
+    ]);
     onSelectChat(convo);
   };
 
@@ -96,8 +143,13 @@ export default function Sidebar({ onSelectChat }) {
     <div className="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-200">Chats</h3>
-          <button onClick={() => setShowNewChat(true)} className="text-blue-600">
+          <h3 className="font-semibold text-gray-800 dark:text-gray-200">
+            Chats
+          </h3>
+          <button
+            onClick={() => setShowNewChat(true)}
+            className="text-blue-600"
+          >
             + New
           </button>
         </div>
@@ -105,13 +157,21 @@ export default function Sidebar({ onSelectChat }) {
         <div className="mt-3 flex gap-2">
           <button
             onClick={() => setActiveTab("chats")}
-            className={`flex-1 py-1 rounded ${activeTab === "chats" ? "bg-gray-200 dark:bg-gray-700 text-blue-600" : "text-gray-500"}`}
+            className={`flex-1 py-1 rounded ${
+              activeTab === "chats"
+                ? "bg-gray-200 dark:bg-gray-700 text-blue-600"
+                : "text-gray-500"
+            }`}
           >
             People
           </button>
           <button
             onClick={() => setActiveTab("groups")}
-            className={`flex-1 py-1 rounded ${activeTab === "groups" ? "bg-gray-200 dark:bg-gray-700 text-blue-600" : "text-gray-500"}`}
+            className={`flex-1 py-1 rounded ${
+              activeTab === "groups"
+                ? "bg-gray-200 dark:bg-gray-700 text-blue-600"
+                : "text-gray-500"
+            }`}
           >
             Groups
           </button>
@@ -121,7 +181,9 @@ export default function Sidebar({ onSelectChat }) {
       <div className="flex-1 overflow-y-auto p-2">
         {activeTab === "chats" ? (
           conversations.length === 0 ? (
-            <p className="text-center text-gray-500 mt-6">No chats yet. Click New → search to start.</p>
+            <p className="text-center text-gray-500 mt-6">
+              No chats yet. Click New → search to start.
+            </p>
           ) : (
             conversations.map((c) => (
               <ConversationItem
@@ -133,19 +195,35 @@ export default function Sidebar({ onSelectChat }) {
           )
         ) : (
           <>
-            <button 
-            onClick={() => 
-            document.dispatchEvent(new 
-            CustomEvent("open-group-modal"))} 
-            className="w-full bg-blue-600 text-white py-2 mb-3 rounded">
+            <button
+              onClick={() =>
+                document.dispatchEvent(new CustomEvent("open-group-modal"))
+              }
+              className="w-full bg-blue-600 text-white py-2 mb-3 rounded"
+            >
               + Create Group
             </button>
             {groups.length === 0 ? (
-              <p className="text-center text-gray-500 mt-6">You are not in any groups.</p>
+              <p className="text-center text-gray-500 mt-6">
+                You are not in any groups.
+              </p>
             ) : (
               groups.map((g) => (
-                <div key={g._id} onClick={() => onSelectChat({ ...g, isGroup: true })}>
-                  <ConversationItem convo={{ ...g, name: g.name, lastMessage: g.lastMessage || "" }} />
+                <div
+                  key={g._id}
+                  onClick={() => onSelectChat({ ...g, isGroup: true, members: g.members || [] })}
+                >
+                  <ConversationItem
+                    convo={{
+                      ...g,
+                      name: g.name,
+                      lastMessage: g.lastMessage || "",
+                      lastMessageSender: g.lastMessageSender || "",
+                      lastMessageSenderName: g.lastMessageSenderName || "",
+                      lastMessageTime: g.lastMessageTime || "",
+                      admins: g.admins || [],
+                    }}
+                  />
                 </div>
               ))
             )}

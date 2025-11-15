@@ -18,7 +18,7 @@ export default function HomePage() {
   const handleSelectChat = (chat) => {
   if (!chat) return;
 
-  // 🌟 If it's a direct chat with "otherUser" structure
+  // If it's a direct chat with "otherUser" structure
   if (!chat.isGroup && chat.otherUser) {
     setSelectedChat({
       _id: chat.otherUser._id,
@@ -30,7 +30,7 @@ export default function HomePage() {
     return;
   }
 
-  // 🌟 If it's a direct chat (from search or sidebar)
+  // If it's a direct chat (from search or sidebar)
   if (!chat.isGroup) {
     setSelectedChat({
       _id: chat._id,
@@ -41,7 +41,7 @@ export default function HomePage() {
     return;
   }
 
-  // 🌟 If it's a group chat
+  // If it's a group chat
   setSelectedChat({
     _id: chat._id,
     name: chat.name,

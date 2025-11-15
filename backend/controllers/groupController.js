@@ -16,43 +16,69 @@ async function pushAudit(groupId, action, by, meta = {}) {
     $push: { audit: { action, by, meta } },
   });
 }
-// GET groups where user is a member
+
+/**
+ * GET /api/groups/my
+*/
 exports.getMyGroups = async (req, res) => {
   try {
-    const groups = await Group.find({
-      members: req.user._id,
-      deleted: false
-    })
-      .select("name description members admins lastMessage lastMessageTime imageUrl")
+    const userId = req.user && req.user._id;
+    if (!userId) return res.status(401).json({ error: "Not authorized" });
+
+    const groups = await Group.find({ members: userId, deleted: { $ne: true } })
+      .sort({ updatedAt: -1 })
+      .populate("members", "name email")
       .lean();
 
-    res.json(groups);
-  } catch (error) {
-    console.error("❌ getMyGroups error:", error);
-    res.status(500).json({ message: "Server error fetching groups" });
+   const result = await Promise.all(groups.map(async (g) => {
+      // find the latest message for this group
+      const lastMsg = await Message.findOne({ group: g._id })
+        .sort({ createdAt: -1 })
+        .populate("sender", "name")
+        .lean();
+
+      return {
+        _id: g._id,
+        name: g.name || "Group",
+        isGroup: true,
+        lastMessage: lastMsg ? (lastMsg.content || lastMsg.fileName || "") : "",
+        lastMessageSender: lastMsg && lastMsg.sender ? String(lastMsg.sender._id) : "",
+        lastMessageSenderName: lastMsg && lastMsg.sender ? lastMsg.sender.name : "",
+        lastMessageTime: lastMsg ? lastMsg.createdAt : (g.updatedAt || null),
+        imageUrl: g.imageUrl || "",
+        members: g.members || [],
+        admins: g.admins || [],
+      };
+    }));
+
+    return res.json(result);
+  } catch (err) {
+    // <-- Make sure you log the error stack so you can debug the real cause
+    console.error("❌ getMyGroups error:", err && err.stack ? err.stack : err);
+    return res.status(500).json({ error: "Failed to load groups" });
   }
 };
 
 
-// CREATE group
-exports.createGroup = async (req, res) => {
-  try {
-    const { name, description } = req.body;
+// // CREATE group
+// exports.createGroup = async (req, res) => {
+//   try {
+//     const { name, description } = req.body;
 
-    const group = await Group.create({
-      name,
-      description,
-      creator: req.user._id,
-      admins: [req.user._id],
-      members: [req.user._id],
-    });
+//     const group = await Group.create({
+//       name,
+//       description,
+//       creator: req.user._id,
+//       admins: [req.user._id],
+//       members: [req.user._id],
+//     });
 
-    res.json(group);
-  } catch (error) {
-    console.error("❌ createGroup error:", error);
-    res.status(500).json({ message: "Server error creating group" });
-  }
-};
+//     res.json(group);
+//   } catch (error) {
+//     console.error("❌ createGroup error:", error);
+//     res.status(500).json({ message: "Server error creating group" });
+//   }
+// };
 
 // ✅ Create a new group
 exports.createGroup = async (req, res) => {
@@ -287,7 +313,18 @@ exports.sendGroupMessage = async (req, res) => {
       type: "text",
     });
 
-    const populated = await message.populate("sender", "name email");
+    const sender = await User.findById(senderId).select("name");
+
+    await Group.findByIdAndUpdate(groupId, {
+      lastMessage: content,
+      lastMessageAt: new Date(),
+      lastMessageSender: senderId,
+      lastMessageSenderName: sender.name,
+     });
+
+     await group.save();
+
+    const populated = await message.populate("sender", "name email avatar");
 
     // Emit message via socket.io
     if (req.io) {
