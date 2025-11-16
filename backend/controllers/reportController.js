@@ -9,7 +9,9 @@ exports.createReport = async (req, res) => {
 
     if (!reason) return res.status(400).json({ message: "Reason is required" });
     if (!userId && !groupId)
-      return res.status(400).json({ message: "Target missing (userId or groupId)" });
+      return res
+        .status(400)
+        .json({ message: "Target missing (userId or groupId)" });
 
     const reportData = {
       reporter: req.user._id,
@@ -18,6 +20,19 @@ exports.createReport = async (req, res) => {
 
     if (userId) reportData.targetUser = userId;
     if (groupId) reportData.targetGroup = groupId;
+
+    // Check duplicate report by same user for same target
+    const existing = await Report.findOne({
+      reporter: req.user._id,
+      targetUser: userId || undefined,
+      targetGroup: groupId || undefined,
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        message: "You already reported this. Admin will review it.",
+      });
+    }
 
     const report = await Report.create(reportData);
     res.status(201).json(report);

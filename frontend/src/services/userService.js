@@ -16,3 +16,11 @@ export const unblockUser = async (userId) => {
   const res = await api.delete(`/users/block/${userId}`);
   return res.data;
 };
+
+/* ------------------------------------------------------
+   REPORT USER
+------------------------------------------------------- */
+export const reportUser = async (userId, reason) => {
+  const res = await api.post(`/users/report/${userId}`, { reason }); 
+  return res.data;
+};
