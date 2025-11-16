@@ -48,14 +48,6 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
     function handleOutsideClick(e) {
       if (menuOpen && menuRef.current && !menuRef.current.contains(e.target))
         setMenuOpen(false);
-      if (
-        searchMode &&
-        searchRef.current &&
-        !searchRef.current.contains(e.target)
-      ) {
-        setSearchMode(false);
-        setSearchTerm("");
-      }
     }
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
@@ -263,7 +255,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
 
           {menuOpen && (
             <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 shadow-lg rounded-lg z-50">
-              <div ref={searchRef}>
+              <div>
                 <button
                   onClick={() => setSearchMode(true)}
                   className="w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
