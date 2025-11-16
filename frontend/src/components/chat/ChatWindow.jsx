@@ -10,6 +10,7 @@ import {
 import {
   getGroupMessages,
   sendGroupMessage,
+  uploadGroupFile,
 } from "../../services/groupService";
 import {
   ArrowLeft,
@@ -134,11 +135,12 @@ const handleFileSend = async (file) => {
   try {
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("receiverId", chat._id);
 
     let newMsg;
 
     if (chat.isGroup) {
-      newMsg = await sendGroupMessage(chat._id, formData, true);
+      newMsg = await uploadGroupFile(chat._id, file);
       socket.emit("group:message:send", newMsg);
     } else {
       const res = await api.post("/messages/upload", formData, {

@@ -11,6 +11,7 @@ const tokenHeader = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
+
 export const getConversations = async () => {
   try {
     const res = await api.get("/conversations", tokenHeader());

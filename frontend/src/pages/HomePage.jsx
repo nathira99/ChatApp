@@ -5,8 +5,10 @@ import Navbar from "../components/common/Navbar";
 import CreateGroup from "../components/group/CreateGroup";
 
 export default function HomePage() {
-  const [selectedChat, setSelectedChat] = useState(null);
+  const [activeChat, setActiveChat] = useState(null); // THE REAL CHAT STATE
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [showSidebar, setShowSidebar] = useState(true); // for mobile sidebar toggle
 
   useEffect(() => {
     const handler = () => setShowCreateGroup(true);
@@ -14,35 +16,36 @@ export default function HomePage() {
     return () => document.removeEventListener("open-group-modal", handler);
   }, []);
 
+  // ------------------------ SELECT CHAT ------------------------
   const handleSelectChat = (chat) => {
     if (!chat) return;
 
-    // If conversation from sidebar contains otherUser, keep other user id
+    // DIRECT CHAT with otherUser object
     if (!chat.isGroup && chat.otherUser) {
-      setSelectedChat({
+      setActiveChat({
         _id: chat.otherUser._id,
         name: chat.otherUser.name,
         email: chat.otherUser.email,
-        conversationId: chat._id,
         isGroup: false,
       });
+      setShowSidebar(false);
       return;
     }
 
-    // If direct chat shaped differently (search result) - other id might be top level
+    // DIRECT CHAT simple
     if (!chat.isGroup) {
-      setSelectedChat({
+      setActiveChat({
         _id: chat._id,
         name: chat.name,
         email: chat.email,
-        conversationId: chat.conversationId || chat._id,
         isGroup: false,
       });
+      setShowSidebar(false);
       return;
     }
 
-    // Group chat
-    setSelectedChat({
+    // GROUP CHAT
+    setActiveChat({
       _id: chat._id,
       name: chat.name,
       description: chat.description,
@@ -50,67 +53,107 @@ export default function HomePage() {
       admins: chat.admins || [],
       isGroup: true,
     });
+
+    setShowSidebar(false);
   };
 
-  const handleCloseChat = () => setSelectedChat(null);
+  // ------------------------ CLOSE CHAT ------------------------
+  const handleCloseChat = () => {
+    setActiveChat(null);
+    setShowSidebar(true);
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
-      {/* NAVBAR: hide on small screens when a chat is selected */}
-      <div className={selectedChat ? "hidden sm:block" : "block"}>
+      {/* NAVBAR:
+          - Show always on desktop
+          - Hide on mobile when chat is active
+      */}
+      <div className={activeChat ? "hidden sm:block" : "block"}>
         <Navbar />
       </div>
 
+      {/* MAIN AREA */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* SIDEBAR
-            - On desktop: always visible (sm:block)
-            - On mobile: visible full screen when no chat selected
-            - When a chat is selected, hide sidebar on mobile
-         */}
+        {/* SIDEBAR */}
         <div
-          className={`w-72 bg-white dark:bg-gray-800 border-r border-gray-300 h-full z-40
-            fixed top-0 left-0 sm:static sm:translate-x-0
-            max-sm:w-full
-            transition-transform duration-200
-            ${selectedChat ? "hidden sm:block" : "block"}
-          `}
+          className={`
+    w-72 bg-white dark:bg-gray-800 border-r border-gray-300 h-full z-40
+    fixed top-0 left-0
+    sm:static sm:block sm:pt-16
+    max-sm:w-full
+    transition-transform duration-200
+    ${activeChat ? "hidden sm:block" : "block"}
+  `}
         >
-          <Sidebar onSelectChat={handleSelectChat} />
+          <Sidebar
+            onSelectChat={handleSelectChat}
+            conversations={conversations}
+            setConversations={setConversations}
+            onClose={() => setShowSidebar(false)}
+          />
         </div>
 
-        {/* Mobile overlay when sidebar is open (prevent interaction behind) */}
-        {!selectedChat && (
+        {/* BACKDROP on mobile when Sidebar is open */}
+        {!activeChat && (
           <div className="sm:hidden inset-0 bg-black/40 z-30 pointer-events-auto" />
         )}
 
-        {/* DESKTOP MAIN AREA */}
-        <div className="flex-1 hidden sm:flex items-center justify-center">
-          {selectedChat ? (
-            <ChatWindow chat={selectedChat} onClose={handleCloseChat} />
+        {/* DESKTOP CHAT AREA */}
+        <div className="flex-1 hidden sm:block overflow-hidden">
+          {activeChat ? (
+            <ChatWindow chat={activeChat} onClose={handleCloseChat} />
           ) : (
-            <div className="text-center text-gray-500 w-full">
-              <h2 className="text-xl font-semibold mb-2">Welcome to ChatApp</h2>
-              <p>Select a conversation to start chatting</p>
+            <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="text-center">
+                <h2 className="text-xl font-semibold mb-2">
+                  Welcome to ChatApp
+                </h2>
+                <p>Select a conversation to start chatting</p>
+              </div>
             </div>
           )}
         </div>
 
-        {/* MOBILE FULLSCREEN CHAT
-            - only render on small screens when a chat is selected
-            - this will be fullscreen (Navbar & Sidebar hidden by wrappers above)
-        */}
-        {selectedChat && (
+        {/* MOBILE FULLSCREEN CHAT */}
+        {activeChat && (
           <div className="flex-1 sm:hidden">
-            <ChatWindow chat={selectedChat} onClose={handleCloseChat} />
+            <ChatWindow chat={activeChat} onClose={handleCloseChat} />
           </div>
         )}
       </div>
 
-      {/* CREATE GROUP MODAL */}
+      {/* ------------------ CREATE GROUP MODAL ------------------ */}
       {showCreateGroup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md">
-            <CreateGroup onClose={() => setShowCreateGroup(false)} />
+            <CreateGroup
+              onClose={() => setShowCreateGroup(false)}
+              onGroupCreated={(g) => {
+                const newGroup = {
+                  _id: g._id,
+                  name: g.name,
+                  description: g.description,
+                  members: g.members || [],
+                  admins: g.admins || [],
+                  isGroup: true,
+                };
+
+                // Add to list
+                setConversations((prev) => [...prev, newGroup]);
+
+                // Open instantly
+                setActiveChat(newGroup);
+
+                // Hide sidebar on mobile
+                setShowSidebar(false);
+
+                // Close modal
+                setShowCreateGroup(false);
+
+                console.log("Redirected to new group:", newGroup);
+              }}
+            />
           </div>
         </div>
       )}

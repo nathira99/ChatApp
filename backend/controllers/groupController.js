@@ -59,27 +59,6 @@ exports.getMyGroups = async (req, res) => {
   }
 };
 
-
-// // CREATE group
-// exports.createGroup = async (req, res) => {
-//   try {
-//     const { name, description } = req.body;
-
-//     const group = await Group.create({
-//       name,
-//       description,
-//       creator: req.user._id,
-//       admins: [req.user._id],
-//       members: [req.user._id],
-//     });
-
-//     res.json(group);
-//   } catch (error) {
-//     console.error("❌ createGroup error:", error);
-//     res.status(500).json({ message: "Server error creating group" });
-//   }
-// };
-
 // ✅ Create a new group
 exports.createGroup = async (req, res) => {
   try {
