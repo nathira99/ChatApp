@@ -90,13 +90,13 @@ export default function Sidebar({ onSelectChat }) {
       return {
         _id: g._id,
         isGroup: true,
-        name: g.name || "Group",
+        name: g.name || g.title || "New Group",
         lastMessage: g.lastMessage || "",
         lastMessageSender: g.lastMessageSender || "",
         lastMessageSenderName: g.lastMessageSenderName || "",
         lastMessagePreview: preview,
         lastMessageTime: g.lastMessageTime || "",
-        imageUrl: g.imageUrl || "",
+        imageUrl: g.imageUrl || [],
         admins: g.admins || [],
       };
     });
@@ -133,18 +133,15 @@ export default function Sidebar({ onSelectChat }) {
   return (
     <div
       className="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 
-      flex flex-col h-full 
+      flex flex-col h-full
       max-sm:absolute max-sm:left-0 max-sm:top-16 
       max-sm:w-full max-sm:h-[calc(100%-64px)] max-sm:z-30 "
     >
       {/* header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex justify-between items-center">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-200 max-sm:hidden">Chats</h3>
-        </div>
+      <div className="p-2 border-b border-gray-200 dark:border-gray-700">
 
         {/* tabs */}
-        <div className="mt-3 flex gap-2">
+        <div className="m-1 flex gap-2">
           <button
             onClick={() => setActiveTab("chats")}
             className={`flex-1 py-1 rounded ${activeTab === "chats" ? "bg-gray-200 dark:bg-gray-700 text-blue-600" : "text-gray-500"}`}

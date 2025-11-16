@@ -175,7 +175,7 @@ const handleFileSend = async (file) => {
   return (
     <div className="flex flex-col h-full w-full bg-gray-50 dark:bg-gray-900">
       {/* HEADER: back button visible only on mobile (sm:hidden) */}
-      <div className="px-4 py-2 border-b bg-white dark:bg-gray-800 flex items-center justify-between">
+      <div className="px-4 py-2 border-b bg-white dark:bg-gray-800 flex items-center justify-between sm:mt-16">
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="block sm:hidden p-2">
             <ArrowLeft className="w-6 h-6" />
