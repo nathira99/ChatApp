@@ -22,7 +22,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow">
+    <nav className="fixed top-0 left-0 right-0 z-50 w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 shadow">
       <h1 className="text-lg font-semibold text-blue-600">ChatApp</h1>
 
       <div className="relative">

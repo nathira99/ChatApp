@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../hooks/useAuth";
+import api from "../../services/api";
 import {
   getMessages,
   sendMessage,
@@ -16,7 +17,6 @@ import {
   MoreVertical,
   AlertTriangle,
   Ban,
-  X,
   Trash2,
 } from "lucide-react";
 import MessageList from "./MessageList";
@@ -39,35 +39,23 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
   const searchRef = useRef(null);
   const navigate = useNavigate();
 
-  const SECRET_KEY =
-    import.meta.env.VITE_ENCRYPTION_KEY || "default_secret_key";
+  const SECRET_KEY = import.meta.env.VITE_ENCRYPTION_KEY || "default_secret_key";
   const clearedOnceRef = useRef(false);
 
-  // ------------------ CLOSE PANELS ON OUTSIDE CLICK ------------------
   useEffect(() => {
     function handleOutsideClick(e) {
-      if (menuOpen && menuRef.current && !menuRef.current.contains(e.target))
-        setMenuOpen(false);
-
-      if (
-        searchMode &&
-        searchRef.current &&
-        !searchRef.current.contains(e.target)
-      ) {
+      if (menuOpen && menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+      if (searchMode && searchRef.current && !searchRef.current.contains(e.target)) {
         setSearchMode(false);
         setSearchTerm("");
       }
     }
-
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [menuOpen, searchMode]);
-  // -------------------------------------------------------------------
 
-  // ------------------ LOAD MESSAGES ------------------
   useEffect(() => {
     if (!chat || !user) return;
-
     const loadMessages = async () => {
       setLoading(true);
       try {
@@ -80,26 +68,21 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
           socket.emit("join", user._id);
         }
 
-        // check cleared timestamp
-        const cleared = JSON.parse(
-          localStorage.getItem("clearedChats") || "{}"
-        );
+        const cleared = JSON.parse(localStorage.getItem("clearedChats") || "{}");
         const clearTime = cleared[chat._id];
 
-        // decrypt and filter
-        const decrypted = data
+        const raw = Array.isArray(data) ? data : (data.messages || data);
+        const decrypted = raw
           .map((msg) => {
             try {
-              const bytes = CryptoJS.AES.decrypt(msg.content, SECRET_KEY);
+              const bytes = CryptoJS.AES.decrypt(msg.content || "", SECRET_KEY);
               const text = bytes.toString(CryptoJS.enc.Utf8);
               return { ...msg, content: text || msg.content };
             } catch {
               return msg;
             }
           })
-          .filter((msg) =>
-            clearTime ? new Date(msg.createdAt).getTime() > clearTime : true
-          );
+          .filter((msg) => (clearTime ? new Date(msg.createdAt).getTime() > clearTime : true));
 
         setMessages(decrypted);
         setFilteredMessages(decrypted);
@@ -112,24 +95,17 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
 
     loadMessages();
   }, [chat, user, socket]);
-  // ----------------------------------------------------
 
-  // ------------------ SEARCH ------------------
   useEffect(() => {
     if (!searchTerm.trim()) setFilteredMessages(messages);
     else {
       const q = searchTerm.toLowerCase();
-      setFilteredMessages(
-        messages.filter((m) => m.content?.toLowerCase().includes(q))
-      );
+      setFilteredMessages(messages.filter((m) => (m.content || "").toLowerCase().includes(q)));
     }
   }, [searchTerm, messages]);
-  // ----------------------------------------------------
 
-  // ------------------ SEND MESSAGE ------------------
   const handleSend = async (content) => {
     if (!content.trim()) return;
-
     try {
       let newMsg;
       if (chat.isGroup) {
@@ -140,7 +116,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
         socket.emit("message:send", newMsg);
       }
 
-      const bytes = CryptoJS.AES.decrypt(newMsg.content, SECRET_KEY);
+      const bytes = CryptoJS.AES.decrypt(newMsg.content || "", SECRET_KEY);
       const dec = bytes.toString(CryptoJS.enc.Utf8);
       const cleanMsg = { ...newMsg, content: dec || content };
 
@@ -151,15 +127,40 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
       console.error("❌ Send failed:", err);
     }
   };
-  // ----------------------------------------------------
+// ------------------ FILE SEND ------------------
+const handleFileSend = async (file) => {
+  if (!file) return;
 
-  // ------------------ FILE SEND ------------------
-  const handleFileSend = async () => {
-    alert("File upload code moved out for clarity. Will re-add when needed.");
-  };
-  // ----------------------------------------------------
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
 
-  // ------------------ CLEAR CHAT ------------------
+    let newMsg;
+
+    if (chat.isGroup) {
+      newMsg = await sendGroupMessage(chat._id, formData, true);
+      socket.emit("group:message:send", newMsg);
+    } else {
+      const res = await api.post("/messages/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      newMsg = res.data;
+      socket.emit("message:send", newMsg);
+    }
+
+    // decrypt if needed
+    const bytes = CryptoJS.AES.decrypt(newMsg.content || "", SECRET_KEY);
+    const dec = bytes.toString(CryptoJS.enc.Utf8);
+
+    const cleanMsg = { ...newMsg, content: dec || newMsg.content };
+
+    setMessages((prev) => [...prev, cleanMsg]);
+  } catch (err) {
+    console.error("❌ File upload failed:", err);
+  }
+};
+
   const handleClearChat = () => {
     const ok = clearChat(chat._id);
     if (ok) {
@@ -168,87 +169,76 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
     }
     setMenuOpen(false);
   };
-  // ----------------------------------------------------
 
-  if (loading)
-    return (
-      <div className="flex-1 flex items-center justify-center text-gray-400">
-        Loading chat...
-      </div>
-    );
+  if (loading) return <div className="flex-1 flex items-center justify-center text-gray-400">Loading chat...</div>;
 
-  // --------------------------- UI ----------------------------
   return (
-  <div className="flex flex-col h-full w-full bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-full w-full bg-gray-50 dark:bg-gray-900">
+      {/* HEADER: back button visible only on mobile (sm:hidden) */}
+      <div className="px-4 py-2 border-b bg-white dark:bg-gray-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="block sm:hidden p-2">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
 
-    {/* HEADER */}
-    <div className="px-4 py-2 border-b bg-white dark:bg-gray-800 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <button onClick={onClose} className="sm:hidden">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+          <div className="cursor-pointer inline-flex items-center gap-2" onClick={() => navigate(chat.isGroup ? `/groups/${chat._id}/info` : `/users/${chat._id}/info`)}>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white">
+              {chat?.name?.charAt(0)?.toUpperCase() || "?"}
+            </div>
 
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center">
-            {chat?.name?.charAt(0)}
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                {chat?.name}
+                {chat.isGroup && chat.admins?.includes(user._id) && <span className="text-[10px] bg-blue-600 text-white px-1 rounded">Admin</span>}
+              </h2>
+              <div className="text-xs text-gray-500">{chat.isGroup ? <span className="truncate block max-w-[200px]">{chat.members?.length ? chat.members.map((m) => m.name).join(", ") : "No members"}</span> : <span>Personal Chat</span>}</div>
+            </div>
           </div>
+        </div>
 
-          <div>
-            <h2 className="font-semibold text-gray-800 dark:text-gray-200">
-              {chat.name}
-            </h2>
-            <p className="text-xs text-gray-500">
-              {chat.isGroup ? "Group Chat" : "Personal Chat"}
-            </p>
-          </div>
+        <div className="relative" ref={menuRef}>
+          <button onClick={() => setMenuOpen((p) => !p)} className="p-2 rounded-full">
+            <MoreVertical className="w-5 h-5 text-gray-600" />
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 shadow-lg rounded-lg z-50">
+              <div ref={searchRef}>
+                <button onClick={() => setSearchMode(true)} className="w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex gap-2">
+                  <Search size={14} /> Search
+                </button>
+              </div>
+
+              <button onClick={handleClearChat} className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex gap-2">
+                <Trash2 size={14} /> Clear Chat
+              </button>
+
+              <button onClick={() => alert("Report submitted")} className="w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex gap-2">
+                <AlertTriangle size={14} /> Report
+              </button>
+
+              {!chat.isGroup && (
+                <button onClick={() => alert("User blocked")} className="w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex gap-2">
+                  <Ban size={14} /> Block
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* MENU */}
-      <div className="relative" ref={menuRef}>
-        <button onClick={() => setMenuOpen(!menuOpen)}>
-          <MoreVertical className="w-5 h-5 text-gray-600" />
-        </button>
+      {/* SEARCH */}
+      {searchMode && (
+        <div className="p-3 bg-gray-100 dark:bg-gray-800">
+          <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search messages…" className="w-full px-3 py-2 rounded-lg" />
+        </div>
+      )}
 
-        {menuOpen && (
-          <div className="absolute right-0 mt-2 bg-white dark:bg-gray-800 shadow-lg rounded-lg w-40">
-            <button
-              onClick={handleClearChat}
-              className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-            >
-              Clear Chat
-            </button>
+      {/* MESSAGES */}
+      <MessageList messages={filteredMessages} currentUserId={user?._id} />
 
-            {!chat.isGroup && (
-              <button
-                onClick={() => alert("Block later")}
-                className="w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-              >
-                Block User
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      {/* INPUT */}
+      <MessageInput onSend={handleSend} onFileSend={handleFileSend} />
     </div>
-
-    {/* SEARCH BAR */}
-    {searchMode && (
-      <div className="p-3 bg-gray-100 dark:bg-gray-800">
-        <input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg"
-          placeholder="Search messages..."
-        />
-      </div>
-    )}
-
-    {/* MESSAGE LIST */}
-    <MessageList messages={filteredMessages} currentUserId={user._id} />
-
-    {/* INPUT */}
-    <MessageInput onSend={handleSend} />
-  </div>
-);
+  );
 }
