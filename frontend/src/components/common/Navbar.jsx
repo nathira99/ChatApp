@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { LogOut, User, Settings } from "lucide-react";
 import ProfilePage from "../../pages/ProfilePage";
 
@@ -8,8 +9,24 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (!user) return null;
+
+  const hideNavbarRoutes = [
+    "/admin",
+    "/admin/users",
+    "/admin/groups",
+    "/admin/reports",
+    "/chat",
+  ];
+
+  const shouldHideNavbar = hideNavbarRoutes.some(
+    (route) => 
+    location.pathname.startsWith(route)
+  );
+
+  if (shouldHideNavbar) return null;
 
   const goToAdmin = () => {
     navigate("/admin");
