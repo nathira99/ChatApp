@@ -10,21 +10,29 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setErrorMsg("");
-  setLoading(true);
+    e.preventDefault();
+    setErrorMsg("");
+    setLoading(true);
 
-  try {
-    await login(email, password); 
-  } catch (err) {
-    const status = err.response?.status;
-      const message = err.response?.data?.message;
+    try {
+      await login(email, password);
+      navigate("/");
+    } catch (err) {
+      const msg = err?.response?.data?.message;
+      const errtype = err.response?.data?.error;
 
-  } finally {
-    setLoading(false);
-  }
-};
-
+      if (errtype === "deactivated") {
+        alert(msg || "Your account has been deactivated by ChatApp admin.");
+        setLoading(false);
+        return;
+      } else if (msg) {
+        setErrorMsg(msg);
+      }
+      alert(msg || "Login failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 px-4">
@@ -34,13 +42,16 @@ export default function Login() {
           Welcome Back
         </h2>
         <p className="text-center text-gray-500 mb-6">
-          Login to continue to <span className="font-semibold text-blue-600">ChatApp</span>
+          Login to continue to{" "}
+          <span className="font-semibold text-blue-600">ChatApp</span>
         </p>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Email
+            </label>
             <input
               type="email"
               value={email}
@@ -52,7 +63,9 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Password
+            </label>
             <input
               type="password"
               value={password}

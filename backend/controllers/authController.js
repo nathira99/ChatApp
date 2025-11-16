@@ -3,6 +3,7 @@ const generateToken = require("../utils/generateToken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
+const { error } = require("console");
 
 // Register
 // Register
@@ -89,9 +90,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ 
         message: "Your account has been deleted by ChatApp admin." });
     }
-    
+
     if(user.isDeactivated){
       return res.status(401).json({ 
+        error: "Deactivated",
         message: "Your account has been deactivated by ChatApp admin." });
     }
     const match = await bcrypt.compare(password, user.password);
