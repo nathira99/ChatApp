@@ -140,17 +140,18 @@ export default function Sidebar({ onSelectChat, onClose }) {
     onSelectChat(convo);
   };
 
-  return (
-  <div className="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-full
-                  max-sm:absolute max-sm:left-0 max-sm:w-full max-sm:h-full max-sm:z-30">
+ return (
+  <div className="
+    w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 
+    flex flex-col h-full
+    max-sm:absolute max-sm:left-0 max-sm:w-full max-sm:h-full max-sm:z-30
+  ">
 
     {/* HEADER */}
     <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-      <div className="flex justify-between items-center">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-200 max-sm:hidden">
-          Chats
-        </h3>
-      </div>
+      <h3 className="font-semibold text-gray-800 dark:text-gray-200 max-sm:hidden">
+        Chats
+      </h3>
 
       {/* TABS */}
       <div className="mt-3 flex gap-2">
@@ -158,7 +159,7 @@ export default function Sidebar({ onSelectChat, onClose }) {
           onClick={() => setActiveTab("chats")}
           className={`flex-1 py-1 rounded ${
             activeTab === "chats"
-              ? "bg-gray-200 dark:bg-gray-700 text-blue-600"
+              ? "bg-blue-600 text-white"
               : "text-gray-500"
           }`}
         >
@@ -169,7 +170,7 @@ export default function Sidebar({ onSelectChat, onClose }) {
           onClick={() => setActiveTab("groups")}
           className={`flex-1 py-1 rounded ${
             activeTab === "groups"
-              ? "bg-gray-200 dark:bg-gray-700 text-blue-600"
+              ? "bg-blue-600 text-white"
               : "text-gray-500"
           }`}
         >
@@ -178,13 +179,10 @@ export default function Sidebar({ onSelectChat, onClose }) {
       </div>
     </div>
 
-    {/* LIST AREA */}
+    {/* LIST */}
     <div className="flex-1 overflow-y-auto p-2">
-      
-      {/* ------------------- PEOPLE TAB ------------------- */}
       {activeTab === "chats" ? (
         <>
-          {/* NEW CHAT BUTTON */}
           <button
             onClick={() => setShowNewChat(true)}
             className="w-full bg-blue-600 text-white py-2 mb-3 rounded"
@@ -194,7 +192,7 @@ export default function Sidebar({ onSelectChat, onClose }) {
 
           {conversations.length === 0 ? (
             <p className="text-center text-gray-500 mt-6">
-              No chats yet. Click "New Chat" to start.
+              No chats yet.
             </p>
           ) : (
             conversations.map((c) => (
@@ -208,7 +206,6 @@ export default function Sidebar({ onSelectChat, onClose }) {
         </>
       ) : (
         <>
-          {/* ------------------- GROUP TAB ------------------- */}
           <button
             onClick={() =>
               document.dispatchEvent(new CustomEvent("open-group-modal"))
@@ -220,31 +217,17 @@ export default function Sidebar({ onSelectChat, onClose }) {
 
           {groups.length === 0 ? (
             <p className="text-center text-gray-500 mt-6">
-              You are not in any groups.
+              No groups available.
             </p>
           ) : (
             groups.map((g) => (
               <div
                 key={g._id}
                 onClick={() =>
-                  onSelectChat({
-                    ...g,
-                    isGroup: true,
-                    members: g.members || [],
-                  })
+                  onSelectChat({ ...g, isGroup: true, members: g.members })
                 }
               >
-                <ConversationItem
-                  convo={{
-                    ...g,
-                    name: g.name,
-                    lastMessage: g.lastMessage || "",
-                    lastMessageSender: g.lastMessageSender || "",
-                    lastMessageSenderName: g.lastMessageSenderName || "",
-                    lastMessageTime: g.lastMessageTime || "",
-                    admins: g.admins || [],
-                  }}
-                />
+                <ConversationItem convo={g} />
               </div>
             ))
           )}
@@ -252,7 +235,6 @@ export default function Sidebar({ onSelectChat, onClose }) {
       )}
     </div>
 
-    {/* NEW CHAT MODAL */}
     {showNewChat && (
       <NewChatModal
         onClose={() => setShowNewChat(false)}

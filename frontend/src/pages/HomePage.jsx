@@ -74,58 +74,44 @@ export default function HomePage() {
       )
     );
   } 
+return (
+  <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
 
-  return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <Navbar />
+    <Navbar />
 
-      <div className={`${activeChat ? "hidden sm-block": "block"} w-72`}>
-        {/* Sidebar */}
-        {showSidebar && 
+    <div className="flex flex-1 overflow-hidden">
+
+      {/* SIDEBAR */}
+      <div className={`w-72 h-full bg-white dark:bg-gray-800 border-r
+        ${activeChat ? "hidden sm:block" : "block"}`}>
         <Sidebar 
-        onSelectChat = {handleSelectChat}
-        conversation = {conversations}
-        setConversations = {setConversations}
-        onClose={() => setShowSidebar(false)}
+          onSelectChat={handleSelectChat}
+          conversation={conversations}
+          setConversations={setConversations}
         />
-}
       </div>
 
-        {/* Chat Window */}
-         <div className="flex-1 bg-gray-50 dark:bg-gray-900 hidden sm:flex items-center justify-center">
-
+      {/* DESKTOP CHAT WINDOW */}
+      <div className="flex-1 hidden sm:flex">
         {activeChat ? (
           <ChatWindow chat={activeChat} onClose={handleCloseChat} />
         ) : (
-          <div className="text-gray-500 text-center px-4">
-            <h2 className="text-xl font-semibold mb-2">Welcome to ChatApp</h2>
-            <p className="text-sm">Select a conversation to start chatting</p>
+          <div className="flex flex-1 items-center justify-center text-gray-500">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold">Welcome to ChatApp</h2>
+              <p>Select a chat to start messaging</p>
+            </div>
           </div>
         )}
-
       </div>
 
-      {/* MOBILE CHAT WINDOW */}
+      {/* MOBILE FULL SCREEN CHAT */}
       {activeChat && (
         <div className="flex-1 sm:hidden">
           <ChatWindow chat={activeChat} onClose={handleCloseChat} />
         </div>
       )}
-
-
-      {showCreateGroup && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
-            <CreateGroup
-              onClose={() => setShowCreateGroup(false)}
-              onGroupCreated={(newGroup) => {
-                setConversations((prev) => [...prev, newGroup]);
-                setShowCreateGroup(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
     </div>
-  );
+  </div>
+);
 }

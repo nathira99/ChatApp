@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import Layout from "../components/layout/Layout"; // if you use a layout wrapper
+// import Layout from "../components/layout/Layout"; // if you use a layout wrapper
 import ChatWindow from "../components/chat/ChatWindow";
 
 export default function ChatPage() {
@@ -9,9 +9,8 @@ export default function ChatPage() {
     _id: userId,
     name: "Chat User", // optional placeholder
     isGroup: false,
-  };return (
-    <Layout>
+  };return (<>
       <ChatWindow chat={chatData} />
-    </Layout>
+    </>
   );
 }
