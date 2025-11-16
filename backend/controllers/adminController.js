@@ -154,3 +154,41 @@ exports.listGroups = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.deactivateUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.isDeactivated = true;
+    await user.save();
+
+    // Send real-time logout event
+    req.app.get("io").to(userId).emit("account:deactivated", {
+      message: "Your account has been deactivated by ChatApp admin."
+    });
+
+    res.json({ message: "User deactivated successfully" });
+  } catch (err) {
+    console.error("Deactivate error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.reactivateUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.isDeactivated = false;
+    await user.save();
+
+    res.json({ message: "User reactivated successfully" });
+  } catch (err) {
+    console.error("Reactivate error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

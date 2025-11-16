@@ -128,23 +128,43 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
       console.error("❌ Send failed:", err);
     }
   };
-// ------------------ FILE SEND ------------------
+// ------------------ FILE SEND (FINAL FIXED) ------------------
 const handleFileSend = async (file) => {
   if (!file) return;
 
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("receiverId", chat._id);
-
     let newMsg;
 
     if (chat.isGroup) {
-      newMsg = await uploadGroupFile(chat._id, file);
+      // GROUP FILE UPLOAD (correct endpoint + FormData)
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await api.post(
+        `/groups/${chat._id}/upload`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      newMsg = res.data;
       socket.emit("group:message:send", newMsg);
+
     } else {
+      // PERSONAL CHAT FILE UPLOAD
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("receiverId", chat._id);
+
       const res = await api.post("/messages/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          Authorization:` Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       newMsg = res.data;
@@ -156,8 +176,8 @@ const handleFileSend = async (file) => {
     const dec = bytes.toString(CryptoJS.enc.Utf8);
 
     const cleanMsg = { ...newMsg, content: dec || newMsg.content };
-
     setMessages((prev) => [...prev, cleanMsg]);
+
   } catch (err) {
     console.error("❌ File upload failed:", err);
   }

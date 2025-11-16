@@ -15,6 +15,16 @@ const initSocket = (server) => {
   io.on("connection", (socket) => {
     console.log("⚡ User connected:", socket.id);
 
+    // 🟢 REGISTER USER FOR TARGETED EVENTS (VERY IMPORTANT)
+  socket.on("register", (userId) => {
+    if (!userId) return;
+    socket.join(userId); // now you can send events to that specific user
+    onlineUsers.set(userId, socket.id);
+
+    console.log("🟢 Registered user:", userId);
+    io.emit("users:online", Array.from(onlineUsers.keys()));
+  });
+
     // 🟢 User comes online
     socket.on("user:online", (userId) => {
       if (!userId) return;

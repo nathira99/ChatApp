@@ -24,5 +24,9 @@ router.delete("/groups/:id", adminCtrl.deleteGroup);
 router.get("/groups/:id", adminCtrl.getGroupDetails);
 router.get("/groups", adminCtrl.listGroups);
 
+// Deactivate/activate account
+router.put("/users/:id/deactivate", adminCtrl.deactivateUser);
+router.put("/users/:id/reactivate", adminCtrl.reactivateUser);
+
 
 module.exports = router;

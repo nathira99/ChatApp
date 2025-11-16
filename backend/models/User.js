@@ -18,6 +18,8 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpire: Date,
     isAdmin: { type: Boolean, default: false },
     blocked: { type: Boolean, default: false },
+    isDeactivated: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

@@ -85,6 +85,15 @@ exports.login = async (req, res) => {
         .status(401)
         .json({ message: "Please verify your email before logging in." });
 
+    if(user.isDeleted){
+      return res.status(401).json({ 
+        message: "Your account has been deleted by ChatApp admin." });
+    }
+    
+    if(user.isDeactivated){
+      return res.status(401).json({ 
+        message: "Your account has been deactivated by ChatApp admin." });
+    }
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ message: "Invalid credentials" });
 

@@ -14,10 +14,10 @@ export default function Navbar() {
   if (!user) return null;
 
   const hideNavbarRoutes = [
-    "/admin",
-    "/admin/users",
-    "/admin/groups",
-    "/admin/reports",
+    // "/admin",
+    // "/admin/users",
+    // "/admin/groups",
+    // "/admin/reports",
     "/chat",
   ];
 
