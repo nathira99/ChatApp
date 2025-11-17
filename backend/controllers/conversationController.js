@@ -1,7 +1,9 @@
+// backend/controllers/conversationController.js
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const Message = require("../models/Message");
 
+// GET /api/conversations/recent
 exports.getRecentChats = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -11,67 +13,19 @@ exports.getRecentChats = async (req, res) => {
       .populate("members", "name email avatar")
       .lean();
 
-    res.json(convos);
+    return res.json(convos);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("❌ getRecentChats error:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
-exports.startChatController = async (req, res) => {
-  try {
-    const me = req.user._id;
-    const { userId } = req.body;
-
-    if (!userId) return res.status(400).json({ message: "UserId required" });
-
-    let convo = await Conversation.findOne({
-      isGroup: false,
-      members: { $all: [me, userId] },
-    })
-      .populate("members", "name email avatar")
-      .lean();
-
-    if (!convo) {
-      convo = await Conversation.create({
-        isGroup: false,
-        members: [me, userId],
-      });
-
-      convo = await convo
-        .populate("members", "name email avatar")
-        .lean();
-    }
-
-    res.json({
-      _id: convo._id,
-      isGroup: false,
-      otherUser: {
-        _id: convo.members.find((m) => m._id.toString() !== me.toString())
-          ._id,
-        name: convo.members.find((m) => m._id.toString() !== me.toString())
-          .name,
-        email: convo.members.find((m) => m._id.toString() !== me.toString())
-          .email,
-        avatar: convo.members.find((m) => m._id.toString() !== me.toString())
-          .avatar || "",
-      },
-      name: convo.members.find((m) => m._id.toString() !== me.toString())
-        .name,
-      lastMessage: convo.lastMessage || "",
-      lastMessageSender: convo.lastMessageSender || "",
-      lastMessageTime: convo.lastMessageTime || null,
-      isGroup: false,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
+// GET /api/conversations
 exports.getConversations = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    let conversations = await Conversation.find({
+    const conversations = await Conversation.find({
       members: userId,
       isGroup: false,
     })
@@ -79,83 +33,35 @@ exports.getConversations = async (req, res) => {
       .sort({ updatedAt: -1 })
       .lean();
 
-    const formatted = conversations.filter(c => 
-      Array.isArray(c.members) && c.members.length === 2
-    )
-    .map((c) => {
-      const other = c.members.find(
-        (m) => m._id.toString() !== userId.toString()
-      );
-
-      if(!other) {
-        console.warn("conversation has no valid partner:", c._id)
-      }
-      return {
-        _id: c._id,
-        isGroup: false,
-        otherUser: {
-          _id: other._id,
+    // Only include 1:1 convos and format other user
+    const formatted = conversations
+      .filter((c) => Array.isArray(c.members) && c.members.length === 2)
+      .map((c) => {
+        const other = c.members.find((m) => m._id.toString() !== userId.toString());
+        return {
+          _id: c._id,
+          isGroup: false,
+          otherUser: {
+            _id: other._id,
+            name: other.name,
+            email: other.email,
+            avatar: other.avatar || "",
+          },
           name: other.name,
-          email: other.email,
-          avatar: other.avatar || "",
-        },
-        name: other.name,
-        lastMessage: c.lastMessage || "",
-        lastMessageSender: c.lastMessageSender || "",
-        lastMessageTime: c.lastMessageTime || null,
-        isGroup: false,
-      };
-    });
+          lastMessage: c.lastMessage || "",
+          lastMessageSender: c.lastMessageSender || "",
+          lastMessageTime: c.lastMessageTime || null,
+        };
+      });
 
-    res.json(formatted);
+    return res.json(formatted);
   } catch (err) {
     console.error("❌ getConversations error:", err);
-    res.status(500).json({ error: "Server error loading conversations" });
+    return res.status(500).json({ error: "Server error loading conversations" });
   }
 };
-exports.getOrCreateConversation = async (req, res) => {
-  try {
-    const myId = req.user._id;
-    const otherId = req.params.userId;
 
-    let convo = await Conversation.findOne({
-      isGroup: false,
-      members: { $all: [myId, otherId] },
-    });
-
-    if (!convo) {
-      convo = await Conversation.create({
-        isGroup: false,
-        members: [myId, otherId],
-      });
-    }
-    const full = await convo.populate("members", "name email avatar");
-
-    const other = full.members.find((m) => m._id.toString() !== myId.toString());
-
-    res.json({ 
-        _id: full._id,
-        isGroup: false,
-        otherUser: {
-          _id: other._id,
-          name: other.name,
-          email: other.email,
-          avatar: other.avatar || "",
-        },
-        name: other.name,
-        lastMessage: full.lastMessage || "",
-        lastMessageSender: full.lastMessageSender || "",
-        lastMessageTime: full.lastMessageTime || null,
-        isGroup: false
-     });
-  } catch (err) {
-    console.error("❌ getOrCreateConversation:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-};
-// -------------------------------------------------------------------
-// POST /conversations → Start a new chat
-// -------------------------------------------------------------------
+// POST /api/conversations  -> start or return existing 1:1 conversation
 exports.startChat = async (req, res) => {
   try {
     const myId = req.user._id;
@@ -163,13 +69,11 @@ exports.startChat = async (req, res) => {
 
     if (!userId) return res.status(400).json({ error: "userId required" });
 
-    // Check if exists
     let convo = await Conversation.findOne({
       isGroup: false,
-      members: { $all: [myId, userId] }
+      members: { $all: [myId, userId] },
     });
 
-    // Create if missing
     if (!convo) {
       convo = await Conversation.create({
         isGroup: false,
@@ -179,15 +83,14 @@ exports.startChat = async (req, res) => {
       });
     }
 
-    // Populate final data
-    const full = await convo.populate("members", "name email avatar");
+    const populated = await convo.populate("members", "name email avatar");
 
-    const otherUser = full.members.find(
+    const otherUser = populated.members.find(
       (m) => m._id.toString() !== myId.toString()
     );
 
-    res.json({
-      _id: full._id,
+    const payload = {
+      _id: populated._id,
       isGroup: false,
       otherUser: {
         _id: otherUser._id,
@@ -196,13 +99,26 @@ exports.startChat = async (req, res) => {
         avatar: otherUser.avatar || "",
       },
       name: otherUser.name,
-      lastMessage: full.lastMessage || "",
-      lastMessageSender: full.lastMessageSender || "",
-      lastMessageTime: full.lastMessageTime || null,
-    });
+      lastMessage: populated.lastMessage || "",
+      lastMessageSender: populated.lastMessageSender || "",
+      lastMessageTime: populated.lastMessageTime || null,
+    };
 
+    // Emit real-time update to both participants (so frontend can refresh)
+    try {
+      const io = req.app.get("io");
+      if (io) {
+        // Emit to the rooms of both users (we assume socket joins rooms with user id)
+        io.to(String(userId)).emit("conversation:created", payload);
+        io.to(String(myId)).emit("conversation:created", payload);
+      }
+    } catch (emitErr) {
+      console.warn("⚠ emit conversation:created failed:", emitErr);
+    }
+
+    return res.json(payload);
   } catch (err) {
     console.error("❌ startChat error:", err);
-    res.status(500).json({ error: "Server error starting chat" });
+    return res.status(500).json({ error: "Server error starting chat" });
   }
 };
