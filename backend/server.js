@@ -15,7 +15,7 @@ const app = express();
 // ✅ CORS setup
 app.use(
   cors({
-    origin: "http://localhost:5173", "https://chatapp90.netlify.app/login",
+    origin: ["http://localhost:5173", "https://chatapp90.netlify.app"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
     exposedHeaders: ["Content-Disposition"],
@@ -34,24 +34,20 @@ const groupController = require("./controllers/groupController");
 groupController.setIO(io);
 app.set("io", io);
 
+const allowedOrigins = ["http://localhost:5173", "https://chatapp90.netlify.app"];
+
 // ✅ Static file handler with proper MIME for media
 app.use(
   "/uploads",
   (req, res, next) => {
-    const filePath = path.join(__dirname, "uploads", req.url);
-
-    // ✅ Audio MIME correction
-    if (filePath.endsWith(".m4a")) res.type("audio/mp4");
-    else if (filePath.endsWith(".mp3")) res.type("audio/mpeg");
-    else if (filePath.endsWith(".ogg") || filePath.endsWith(".opus"))
-      res.type("audio/ogg"); // ✅ opus uses ogg container
-    else if (filePath.endsWith(".mp4")) res.type("video/mp4");
-
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
     res.header("Cross-Origin-Resource-Policy", "cross-origin");
-    res.header("Access-Control-Allow-Origin", "http://localhost:5173");
     next();
   },
-  express.static(path.join(__dirname, "uploads"))
+    express.static(path.join(__dirname, "uploads"))
 );
 
 
