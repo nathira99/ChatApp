@@ -1,27 +1,25 @@
-const sgMail = require("@sendgrid/mail");
+const axios = require("axios");
 
 const sendEmail = async (to, subject, html) => {
-  try {
-    const apiKey = process.env.SENDGRID_KEY;
-    if (!apiKey) throw new Error("SENDGRID_KEY missing");
+  const apiKey = process.env.BREVO_KEY;
 
-    sgMail.setApiKey(apiKey);
-
-    const msg = {
-      to,
-      from: process.env.EMAIL_FROM, // must be the verified Gmail in SendGrid
+  const res = await axios.post(
+    "https://api.brevo.com/v3/smtp/email",
+    {
+      sender: { email: process.env.EMAIL_FROM, name: "ChatApp" },
+      to: [{ email: to }],
       subject,
-      html,
-    };
+      htmlContent: html,
+    },
+    {
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
-    const result = await sgMail.send(msg);
-    console.log("📧 SendGrid email sent:", result[0].statusCode);
-
-    return { status: "sent", code: result[0].statusCode };
-  } catch (err) {
-    console.error("❌ SendGrid error:", err);
-    throw err;
-  }
+  return res.data;
 };
 
 module.exports = sendEmail;
