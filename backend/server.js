@@ -1,6 +1,7 @@
 const path = require("path");
 const express = require("express");
 require("dotenv").config();
+const sendEmail = require("./utils/sendEmail");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const { createServer } = require("http");
@@ -24,6 +25,27 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// --- quick test route: POST /utils/test-send
+app.post("/utils/test-send", async (req, res) => {
+  try {
+    // test target: prefer body.to, fallback to SMTP_USER
+    const to = (req.body && req.body.to) || process.env.SMTP_USER;
+    const subject = "ChatApp — test email";
+    const html = `<p>This is a test email from ChatApp at ${new Date().toISOString()}</p>`;
+
+    if (!to) {
+      return res.status(400).json({ error: "No recipient provided and SMTP_USER not set" });
+    }
+
+    const info = await sendEmail(to, subject, html);
+    console.log("✅ test-send success:", info);
+    res.json({ ok: true, info });
+  } catch (err) {
+    console.error("❌ test-send error:", err && err.stack ? err.stack : err);
+    res.status(500).json({ error: err.message || "send failed", stack: err.stack });
+  }
+});
 
 // ✅ Initialize HTTP + Socket.io
 const server = createServer(app);
