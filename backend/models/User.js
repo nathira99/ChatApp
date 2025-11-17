@@ -7,11 +7,13 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     avatar: { type: String, default: "" },
+    about: { type: String, default: "" },
     status: { type: String, enum: ["online", "offline", "away", "busy"], default: "offline" },
     isVerified: {
       type: Boolean,
       default: false,
     },
+    joinDate: { type: Date, default: Date.now },
     verificationToken: String,
     verificationExpires: Date,
     resetPasswordToken: String,

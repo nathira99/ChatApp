@@ -45,4 +45,21 @@ export const authService = {
     const res = await api.get("/auth/me");
     return res.data;
   },
+
+  updateUser: async (data) => {
+    const form = new FormData(data);
+
+    if(data.avatarFile) form.append("avatar", data.avatarFile);
+    if(data.name) form.append("name", data.name);
+    if(data.about) form.append("about", data.about);
+    if(data.status) form.append("status", data.status);
+
+    const res = await api.put("/auth/profile", form, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return res.data;
+  },
 };

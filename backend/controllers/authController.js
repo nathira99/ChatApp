@@ -38,7 +38,7 @@ const html = `
          style="max-width: 500px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
     <tr>
       <td style="padding: 25px 30px; text-align: center;">
-        <img src="${process.env.FRONTEND_URL}/public/chat-message-heart-svgrepo-com.svg" 
+        <img src="${process.env.FRONTEND_URL}/chat-message-heart-svgrepo-com.svg" 
              alt="ChatApp" style="width: 70px; margin-bottom: 10px;">
         <h2 style="color: #111; margin-bottom: 5px;">Verify Your ChatApp Account</h2>
         <p style="color: #555; font-size: 15px;">Hi ${user.name},</p>
@@ -229,9 +229,11 @@ exports.resetPassword = async (req, res) => {
 // Update User Profile
 exports.updateProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    console.log("Profile update:", req.body);
+    console.log("File:", req.file);
     if (req.body.name) user.name = req.body.name;
     if (req.body.about) user.about = req.body.about;
     if (req.body.status) user.status = req.body.status;
@@ -257,17 +259,12 @@ if (req.app.get("io")) {
 // Get User Profile
 exports.getProfile = async (req, res) => {
   try {
+    const user = await User.findById(req.user._id).select("-password");
+
     if (!req.user) {
       return res.status(401).json({ message: "Not authorized" });
     }
-    res.json({
-      _id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      about: req.user.about,
-      avatar: req.user.avatar,
-      status: req.user.status,
-    });
+    res.json(user);
   } catch (err) {
     console.error("Profile fetch error:", err);
     res.status(500).json({ message: "Server error fetching profile" });

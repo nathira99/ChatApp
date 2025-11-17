@@ -1,197 +1,112 @@
+// src/pages/ProfilePage.jsx
 import React, { useState, useEffect } from "react";
 import api from "../services/api";
-import {
-  User,
-  Mail,
-  MessageCircle,
-  Power,
-  CheckCircle,
-  Loader2,
-  Upload,
-} from "lucide-react";
+import { User, Mail, MessageCircle, Calendar, Power, User2 } from "lucide-react";
+import { useSocket } from "../context/SocketContext";
+import { useAuth } from "../hooks/useAuth";
+import { getAvatarUrl } from "../utils/avatar";
 
-const ProfilePage = () => {
+export default function ProfilePage() {
+  const { userProfiles } = useSocket();
+
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
-  const [name, setName] = useState("");
-  const [about, setAbout] = useState("");
-  const [status, setStatus] = useState("online");
-  const [avatar, setAvatar] = useState("");
-  const [preview, setPreview] = useState("");
-  const [msg, setMsg] = useState("");
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await api.get("/auth/profile");
-        const userData = res.data || {};
-
-        setUser(userData);
-        setPreview(userData.avatar || "/avatar.png");
-        setName(userData.name || "");
-        setStatus(userData.status || "offline");
-        setAbout(userData.about || "");
-        setAvatar(userData.avatar || "");
-      } catch (error) {
-        console.error("Failed to load profile:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
-
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAvatar(reader.result);
-      setPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    setUpdating(true);
+  const loadProfile = async () => {
     try {
-      const formData = new FormData();
-      if (avatar) formData.append("avatar", avatar);
-      formData.append("name", name);
-      formData.append("about", about);
-      formData.append("status", status);
-
-      await api.put("/auth/profile", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      setMsg("✅ Profile updated successfully");
-      setTimeout(() => setMsg(""), 2000);
+      const res = await api.get("/auth/profile");
+      setUser(res.data);
     } catch (err) {
-      console.error("Update failed:", err);
-      setMsg("❌ Failed to update profile");
+      console.error("Failed to load profile:", err);
     } finally {
-      setUpdating(false);
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  // ---------------- REAL-TIME PROFILE SYNC ----------------
+  useEffect(() => {
+    if (!user) return;
+    const live = userProfiles[user._id];
+    if (live) {
+      setUser((prev) => ({
+        ...prev,
+        ...live,
+      }));
+    }
+  }, [userProfiles, user?._id]);
+
   if (loading)
     return (
-      <div className="flex justify-center items-center h-screen text-gray-400 text-lg">
+      <div className="flex justify-center items-center h-screen text-gray-400">
         Loading profile...
       </div>
     );
 
+  if (!user) return null;
+
   return (
     <div className="min-h-screen flex justify-center items-center bg-gray-100 dark:bg-gray-950">
-      <div className="w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl rounded-2xl p-6 border border-gray-200 dark:border-gray-800 relative">
+      <div className="w-full max-w-md bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border border-gray-200 dark:border-gray-800">
         <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           My Profile
         </h2>
 
-        {/* Top Avatar + User Info */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="relative">
-            <img
-              src={preview || "/avatar.png"}
-              alt="Avatar"
-              className="w-20 h-20 rounded-full object-cover border-2 border-blue-500 shadow-lg"
-            />
-            <label className="absolute bottom-0 right-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full p-1 cursor-pointer hover:scale-105 transition">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
-              <Upload size={12} />
-            </label>
-          </div>
-
-          <div>
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-              {name || "User"}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-              {status}
-            </p>
-          </div>
+        {/* Avatar */}
+        <div className="flex justify-center mb-4">
+          <img
+            src={getAvatarUrl(user.avatar) || user.avatar}
+            alt="Avatar"
+            className="w-24 h-24 rounded-full object-cover border-2 border-blue-500 shadow-md"
+          />
         </div>
 
-        <form onSubmit={handleUpdate} className="space-y-4">
+        {/* Basic Info */}
+        <div className="space-y-4 text-gray-800 dark:text-gray-200">
           {/* Name */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">
-              <User size={18} /> Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Your name"
-            />
+          <div className="flex items-center gap-3">
+            <User className="text-blue-600" />
+            <span className="font-semibold">{user.name}</span>
+          </div>
+
+          {/* Email */}
+          <div className="flex items-center gap-3">
+            <Mail className="text-purple-600" />
+            <span>{user.email}</span>
           </div>
 
           {/* About */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">
-              <MessageCircle size={18} /> About
-            </label>
-            <input
-              type="text"
-              value={about}
-              onChange={(e) => setAbout(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Something about you..."
-            />
+          <div className="flex items-center gap-3">
+            <MessageCircle className="text-green-600" />
+            <span>{user.about || "No bio added"}</span>
           </div>
 
           {/* Status */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">
-              <Power size={18} /> Status
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="online">Online</option>
-              <option value="away">Away</option>
-              <option value="busy">Busy</option>
-              <option value="offline">Offline</option>
-            </select>
+          <div className="flex items-center gap-3">
+            <Power className="text-red-600" />
+            <span className="capitalize">{user.status || "offline"}</span>
           </div>
 
-          {/* Save Button */}
-          <button
-            type="submit"
-            disabled={updating}
-            className="w-full py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 transition flex items-center justify-center gap-2"
-          >
-            {updating ? (
-              <>
-                <Loader2 className="animate-spin" size={18} /> Updating...
-              </>
-            ) : (
-              <>
-                <CheckCircle size={18} /> Save Changes
-              </>
-            )}
-          </button>
-        </form>
+          {/* Joined Date */}
+          <div className="flex items-center gap-3">
+            <Calendar className="text-yellow-600" />
+            <span>Joined: {new Date(user.createdAt).toLocaleDateString()}</span>
+          </div>
+        </div>
 
-        {msg && (
-          <p className="text-center mt-4 text-sm text-blue-600 dark:text-blue-400">
-            {msg}
-          </p>
-        )}
+        {/* SETTINGS BUTTON */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => (window.location.href = "/settings")}
+            className="w-full py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:opacity-90 transition"
+          >
+            Edit Profile
+          </button>
+        </div>
       </div>
     </div>
   );
-};
-
-export default ProfilePage;
+}
