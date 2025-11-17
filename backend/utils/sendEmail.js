@@ -1,62 +1,27 @@
-const { Resend } = require("resend");
+const sgMail = require("@sendgrid/mail");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-async function sendEmail(to, subject, html) {
+const sendEmail = async (to, subject, html) => {
   try {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("Missing RESEND_API_KEY in .env");
-    }
-    if (!process.env.EMAIL_FROM) {
-      throw new Error("Missing EMAIL_FROM in .env");
-    }
+    const apiKey = process.env.SENDGRID_KEY;
+    if (!apiKey) throw new Error("SENDGRID_KEY missing");
 
-    const response = await resend.emails.send({
-      from: process.env.EMAIL_FROM,
+    sgMail.setApiKey(apiKey);
+
+    const msg = {
       to,
+      from: process.env.EMAIL_FROM, // must be the verified Gmail in SendGrid
       subject,
       html,
-    });
+    };
 
-    console.log("📧 Resend email sent:", response);
-    return response;
+    const result = await sgMail.send(msg);
+    console.log("📧 SendGrid email sent:", result[0].statusCode);
+
+    return { status: "sent", code: result[0].statusCode };
   } catch (err) {
-    console.error("❌ Resend email error:", err);
+    console.error("❌ SendGrid error:", err);
     throw err;
   }
-}
+};
 
 module.exports = sendEmail;
-
-// const nodemailer = require("nodemailer");
-
-// const sendEmail = async (to, subject, html) => {
-//   const user = process.env.SMTP_USER;
-//   const pass = process.env.SMTP_PASS;
-
-//   if (!user || !pass) {
-//     throw new Error("Email credentials missing — check .env");
-//   }
-
-//   const transporter = nodemailer.createTransport({
-//     host: process.env.SMTP_HOST,
-//     port: Number(process.env.SMTP_PORT),
-//     secure: false,
-//     auth: {
-//       user,
-//       pass,
-//     },
-//   });
-
-//   await transporter.sendMail({
-//     from: `"ChatApp Team" <${user}>`,
-//     to,
-//     subject,
-//     html, // ✅ send HTML content properly
-//     text: "If you cannot view this email, please copy and paste the link into your browser.",
-//   });
-
-//   console.log("📧 Email sent successfully to:", to);
-// };
-
-// module.exports = sendEmail;

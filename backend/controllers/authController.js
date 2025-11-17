@@ -6,7 +6,6 @@ const sendEmail = require("../utils/sendEmail");
 const { error } = require("console");
 
 // Register
-// Register
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -69,7 +68,7 @@ const html = `
       avatar: user.avatar,
       isAdmin: user.isAdmin,
       token: generateToken(user),
-    });
+    }, { message: "Verification email sent" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
