@@ -68,7 +68,6 @@ const html = `
       avatar: user.avatar,
       isAdmin: user.isAdmin,
       isVerified: true,
-      token: generateToken(user),
     }, { message: "Verification email sent" });
   } catch (error) {
     res.status(500).json({ message: error.message });

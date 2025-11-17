@@ -13,7 +13,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
-import VerifyEmail from "./pages/VerifyEmail";
+// import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminRoute from "./pages/routes/AdminRoute";
@@ -37,7 +37,7 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/verify/:token" element={<VerifyEmail />} />
+            {/* <Route path="/verify/:token" element={<VerifyEmail />} /> */}
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/users/:id/info" element={<UserInfo />} />

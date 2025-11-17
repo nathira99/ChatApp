@@ -28,16 +28,16 @@ export default function Register() {
   try {
     await authService.register(name, email, password);
 
-    setSuccessMsg(
-      "✅ Registration successful! A verification link has been sent to your email."
-    );
+    // setSuccessMsg(
+    //   "✅ Registration successful! A verification link has been sent to your email."
+    // );
 
     setName("");
     setEmail("");
     setPassword("");
     setConfirmPassword("");
 
-    setTimeout(() => navigate("/login"), 3000);
+    setTimeout(() => navigate("/login"), 1000);
   } catch (err) {
     setErrorMsg(err.response?.data?.message || "Registration failed.");
   } finally {
