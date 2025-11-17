@@ -58,7 +58,7 @@ export default function ProfilePage() {
         {/* Avatar */}
         <div className="flex justify-center mb-4">
           <img
-            src={getAvatarUrl(user.avatar) || user.avatar}
+            src={getAvatarUrl(user.avatar)}
             alt="Avatar"
             className="w-24 h-24 rounded-full object-cover border-2 border-blue-500 shadow-md"
           />

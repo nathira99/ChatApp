@@ -54,6 +54,14 @@ export default function SettingsPage() {
     const file = e.target.files[0];
     if (!file) return;
 
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert("Invalid file type, must be JPEG, PNG, or JPG");
+      e.target.value = "";
+      return;
+    };
+
     setAvatarFile(file);
 
     // Preview local temporary image

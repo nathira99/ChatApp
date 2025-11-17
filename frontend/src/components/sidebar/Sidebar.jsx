@@ -4,6 +4,7 @@ import { getConversations, getUserGroups } from "../../services/chatService";
 import ConversationItem from "./ConversationItem";
 import NewChatModal from "./NewChatModal";
 import { PlusIcon } from "lucide-react";
+import { SocketProvider, useSocket } from "../../context/SocketContext";
 
 export default function Sidebar({ onSelectChat }) {
   const { user } = useAuth();
@@ -11,13 +12,31 @@ export default function Sidebar({ onSelectChat }) {
   const [conversations, setConversations] = useState([]);
   const [groups, setGroups] = useState([]);
   const [showNewChat, setShowNewChat] = useState(false);
+  const { refreshTrigger } = useSocket;
+  const { socket } = useSocket();
+
+  const triggerRefresh = () => {
+    socket.emit("users:refresh");
+    socket.emit("groups:refresh");
+  };
 
   useEffect(() => {
     loadConversations();
     loadGroups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshTrigger]);
 
+  useEffect(() => {
+  if (!socket) return;
+
+  socket.on("users:refresh", loadConversations);
+  socket.on("groups:refresh", loadGroups);
+
+  return () => {
+    socket.off("users:refresh");
+    socket.off("groups:refresh");
+  };
+}, [socket]);
   const normalizeConversations = (list = [], myId) => {
     return (list || [])
       .map((c) => {

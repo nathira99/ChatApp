@@ -62,9 +62,11 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
         if (chat.isGroup) {
           data = await getGroupMessages(chat._id);
           socket.emit("join:group", chat._id);
+          socket.emit("group:refresh");
         } else {
           data = await getMessages(chat._id);
           socket.emit("join", user._id);
+          socket.emit("users:refresh");
         }
 
         const cleared = JSON.parse(

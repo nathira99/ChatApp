@@ -69,6 +69,7 @@ const initSocket = (server) => {
     // 🧩 Profile update broadcast (when user updates profile)
     socket.on("user:profile:update", (updatedUser) => {
       io.emit("user:profile:update", updatedUser);
+      
       console.log(`🧩 User profile updated: ${updatedUser.name}`);
     });
 

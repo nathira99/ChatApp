@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { getAvatarUrl } from "../utils/avatar";
 
 const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [userProfiles, setUserProfiles] = useState({}); // 🧩 store all user info (avatar, status, etc.)
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export const SocketProvider = ({ children }) => {
         [updatedUser._id]: {
           ...prev[updatedUser._id],
           ...updatedUser,
+          avatar: getAvatarUrl(updatedUser.avatar),
         },
       }));
       console.log("🧩 Updated user profile:", updatedUser.name);
@@ -94,6 +97,10 @@ export const SocketProvider = ({ children }) => {
     }
   };
 
+  const triggerRefresh = () => { 
+    setRefreshTrigger(Date.now());
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -102,6 +109,8 @@ export const SocketProvider = ({ children }) => {
         userProfiles,
         updateStatus,
         broadcastProfileUpdate,
+        refreshTrigger,
+        triggerRefresh
       }}
     >
       {children}

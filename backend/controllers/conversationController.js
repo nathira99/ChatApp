@@ -19,22 +19,49 @@ exports.getRecentChats = async (req, res) => {
 
 exports.startChatController = async (req, res) => {
   try {
-    const loggedIn = req.user._id;
+    const me = req.user._id;
     const { userId } = req.body;
+
+    if (!userId) return res.status(400).json({ message: "UserId required" });
 
     let convo = await Conversation.findOne({
       isGroup: false,
-      members: { $all: [loggedIn, userId] },
-    });
+      members: { $all: [me, userId] },
+    })
+      .populate("members", "name email avatar")
+      .lean();
 
     if (!convo) {
       convo = await Conversation.create({
         isGroup: false,
-        members: [loggedIn, userId],
+        members: [me, userId],
       });
+
+      convo = await convo
+        .populate("members", "name email avatar")
+        .lean();
     }
 
-    res.json(convo);
+    res.json({
+      _id: convo._id,
+      isGroup: false,
+      otherUser: {
+        _id: convo.members.find((m) => m._id.toString() !== me.toString())
+          ._id,
+        name: convo.members.find((m) => m._id.toString() !== me.toString())
+          .name,
+        email: convo.members.find((m) => m._id.toString() !== me.toString())
+          .email,
+        avatar: convo.members.find((m) => m._id.toString() !== me.toString())
+          .avatar || "",
+      },
+      name: convo.members.find((m) => m._id.toString() !== me.toString())
+        .name,
+      lastMessage: convo.lastMessage || "",
+      lastMessageSender: convo.lastMessageSender || "",
+      lastMessageTime: convo.lastMessageTime || null,
+      isGroup: false,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -86,7 +113,6 @@ exports.getConversations = async (req, res) => {
     res.status(500).json({ error: "Server error loading conversations" });
   }
 };
-
 exports.getOrCreateConversation = async (req, res) => {
   try {
     const myId = req.user._id;
@@ -132,29 +158,34 @@ exports.getOrCreateConversation = async (req, res) => {
 // -------------------------------------------------------------------
 exports.startChat = async (req, res) => {
   try {
-    const loggedIn = req.user._id;
+    const myId = req.user._id;
     const { userId } = req.body;
 
-    if (!userId) return res.status(400).json({ error: "UserId required" });
+    if (!userId) return res.status(400).json({ error: "userId required" });
 
+    // Check if exists
     let convo = await Conversation.findOne({
       isGroup: false,
-      members: { $all: [me, userId] },
+      members: { $all: [myId, userId] }
     });
 
+    // Create if missing
     if (!convo) {
       convo = await Conversation.create({
         isGroup: false,
-        members: [loggedIn, userId],
+        members: [myId, userId],
         lastMessage: "",
         lastMessageTime: null,
       });
     }
+
+    // Populate final data
     const full = await convo.populate("members", "name email avatar");
 
     const otherUser = full.members.find(
-        (m) => m._id.toString() !== loggedIn.toString()
-      );
+      (m) => m._id.toString() !== myId.toString()
+    );
+
     res.json({
       _id: full._id,
       isGroup: false,
@@ -166,8 +197,10 @@ exports.startChat = async (req, res) => {
       },
       name: otherUser.name,
       lastMessage: full.lastMessage || "",
+      lastMessageSender: full.lastMessageSender || "",
       lastMessageTime: full.lastMessageTime || null,
     });
+
   } catch (err) {
     console.error("❌ startChat error:", err);
     res.status(500).json({ error: "Server error starting chat" });

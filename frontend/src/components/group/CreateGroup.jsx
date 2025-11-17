@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import api from "../../services/api";
 import { useAuth } from "../../hooks/useAuth";
+import { Socket } from "socket.io-client";
+import { useSocket } from "../../context/SocketContext";
+import { triggerRefresh } from "../../utils/triggerRefresh";
 
 export default function CreateGroup({ onClose, onGroupCreated }) {
   const { user } = useAuth(); // logged-in user
@@ -11,6 +14,7 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { socket } = useSocket();
 
   useEffect(() => {
     fetchUsers();
@@ -78,6 +82,7 @@ export default function CreateGroup({ onClose, onGroupCreated }) {
 
       onGroupCreated && onGroupCreated(res.data);
       onClose();
+      triggerRefresh(socket);
     } catch (err) {
       console.error("❌ Error creating group:", err);
       alert("Failed to create group");
