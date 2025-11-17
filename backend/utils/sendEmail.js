@@ -1,8 +1,8 @@
 const nodemailer = require("nodemailer");
 
 const sendEmail = async (to, subject, html) => {
-  const user = process.env.EMAIL_USER;
-  const pass = process.env.EMAIL_PASS;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
 
   if (!user || !pass) {
     throw new Error("Email credentials missing — check .env");
