@@ -10,7 +10,7 @@ const {
 // GET recent chats
 router.get("/", protect, getConversations);
 router.get("/recent", protect, getRecentChats);
-router.post("/start", protect, startChat);
+router.post("/conversations", protect, startChat);
 
 
 module.exports = router;
