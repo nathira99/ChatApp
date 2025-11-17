@@ -67,6 +67,7 @@ const html = `
       email: user.email,
       avatar: user.avatar,
       isAdmin: user.isAdmin,
+      isVerified: true,
       token: generateToken(user),
     }, { message: "Verification email sent" });
   } catch (error) {
@@ -74,39 +75,44 @@ const html = `
   }
 };
 
-// Login
+// =======================================
+// LOGIN WITHOUT ANY EMAIL VERIFICATION
+// =======================================
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "User not found, please register" });
-    if (!user.isVerified)
-      return res
-        .status(401)
-        .json({ message: "Please verify your email before logging in." });
 
-    if(user.isDeleted){
-      return res.status(401).json({ 
-        message: "Your account has been deleted by ChatApp admin." });
-    }
+    if (!user)
+      return res.status(400).json({ message: "Invalid credentials" });
 
-    if(user.isDeactivated){
-      return res.status(401).json({ 
-        error: "Deactivated",
-        message: "Your account has been deactivated by ChatApp admin." });
-    }
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ message: "Invalid credentials" });
+    // REMOVE THIS (email verification step)
+    // if (!user.isVerified) {
+    //   return res.status(400).json({ message: "Please verify your email first" });
+    // }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-      token: generateToken(user),
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        isAdmin: user.isAdmin,
+      },
     });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -119,23 +125,23 @@ exports.logout = async (req, res) => {
   }
 };
 // Verify email
-exports.verifyEmail = async (req, res) => {
-  const { token } = req.params;
-  const user = await User.findOne({
-    verificationToken: token,
-    verificationExpires: { $gt: Date.now() },
-  });
+// exports.verifyEmail = async (req, res) => {
+//   const { token } = req.params;
+//   const user = await User.findOne({
+//     verificationToken: token,
+//     verificationExpires: { $gt: Date.now() },
+//   });
 
-  if (!user)
-    return res.status(400).json({ message: "Invalid or expired token" });
+//   if (!user)
+//     return res.status(400).json({ message: "Invalid or expired token" });
 
-  user.isVerified = true;
-  user.verificationToken = undefined;
-  user.verificationExpires = undefined;
-  await user.save();
+//   user.isVerified = true;
+//   user.verificationToken = undefined;
+//   user.verificationExpires = undefined;
+//   await user.save();
 
-  res.json({ message: "Email verified successfully" });
-};
+//   res.json({ message: "Email verified successfully" });
+// };
 // Forgot Password
 exports.forgotPassword = async (req, res) => {
   try {

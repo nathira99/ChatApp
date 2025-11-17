@@ -19,6 +19,7 @@ export const authService = {
 
   register: async (name, email, password) => {
     const res = await api.post("/auth/register", { name, email, password });
+    window.location.href = "/login";
     const data = res.data;
     const user = data.user ? data.user : {
       _id: data._id,
@@ -27,8 +28,8 @@ export const authService = {
       avatar: data.avatar,
       isAdmin: data.isAdmin,
     };
-    const token = data.token;
-    return { user, token };
+    // const token = data.token;
+    return { user };
   },
 
   forgotPassword: async (email) => {

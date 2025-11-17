@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema(
     status: { type: String, enum: ["online", "offline", "away", "busy"], default: "offline" },
     isVerified: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     joinDate: { type: Date, default: Date.now },
     verificationToken: String,
