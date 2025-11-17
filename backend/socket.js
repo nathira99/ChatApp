@@ -6,7 +6,7 @@ const onlineUsers = new Map();
 const initSocket = (server) => {
   const io = new Server(server, {
     cors: {
-      origin: "http://localhost:5173", // frontend origin
+      origin: "http://localhost:5173", "https://chatapp90.netlify.app/login", // frontend origin
       methods: ["GET", "POST"],
       credentials: true,
     },

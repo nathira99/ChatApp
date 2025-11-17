@@ -1,28 +1,21 @@
 const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const path = require("path");
 const fs = require("fs");
+const cloudinary = require("../config/cloudinary");
 
 // Ensure uploads folder exists
 const uploadDir = path.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 // ✅ Configure Multer storage
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename(req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params:{
+    folder: "chatapp_uploads",
+    allowedFormats: ["jpg", "png", "jpeg", "svg", "pdf"],
   },
 });
-
-// ✅ File filter (optional)
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/svg+xml", "application/pdf"];
-  if (allowedTypes.includes(file.mimetype)) cb(null, true);
-  else cb(new Error("Invalid file type"), false);
-};
-
-const upload = multer({ storage, fileFilter });
+const upload = multer({ storage });
 
 module.exports = upload;

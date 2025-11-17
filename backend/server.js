@@ -15,7 +15,7 @@ const app = express();
 // ✅ CORS setup
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "http://localhost:5173", "https://chatapp90.netlify.app/login",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
     exposedHeaders: ["Content-Disposition"],
