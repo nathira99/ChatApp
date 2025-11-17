@@ -5,8 +5,8 @@ const fs = require("fs");
 const cloudinary = require("../config/cloudinary");
 
 // Ensure uploads folder exists
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+// const uploadDir = path.join(__dirname, "../uploads");
+// if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 // ✅ Configure Multer storage
 const storage = new CloudinaryStorage({
@@ -14,6 +14,7 @@ const storage = new CloudinaryStorage({
   params:{
     folder: "chatapp_uploads",
     allowedFormats: ["jpg", "png", "jpeg", "svg", "pdf"],
+    public_id: Date.now().toString(),
   },
 });
 const upload = multer({ storage });
