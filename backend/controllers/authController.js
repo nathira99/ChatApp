@@ -29,37 +29,37 @@ exports.register = async (req, res) => {
       verificationExpires: Date.now() + 10 * 60 * 1000,
     });
 
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify/${verificationToken}`;
+//     const verifyUrl = `${process.env.FRONTEND_URL}/verify/${verificationToken}`;
 
-const html = `
-<div style="font-family: Arial, sans-serif; background-color: #f4f7fb; padding: 30px;">
-  <table align="center" cellpadding="0" cellspacing="0" width="100%" 
-         style="max-width: 500px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-    <tr>
-      <td style="padding: 25px 30px; text-align: center;">
-        <img src="${process.env.FRONTEND_URL}/chat-message-heart-svgrepo-com.svg" 
-             alt="ChatApp" style="width: 70px; margin-bottom: 10px;">
-        <h2 style="color: #111; margin-bottom: 5px;">Verify Your ChatApp Account</h2>
-        <p style="color: #555; font-size: 15px;">Hi ${user.name},</p>
-        <p style="color: #666; font-size: 14px; line-height: 1.6;">
-          Thanks for signing up! Please confirm your email address by clicking the button below.
-        </p>
-        <a href="${verifyUrl}" 
-          style="display:inline-block; margin-top: 20px; padding: 12px 30px; background: linear-gradient(90deg,#4f46e5,#7c3aed);
-          color: white; text-decoration: none; font-weight: 600; border-radius: 8px;">
-          Verify My Email
-        </a>
-        <p style="margin-top: 25px; color: #999; font-size: 12px;">
-          This link will expire in 10 minutes.<br>
-          If you didn’t create an account, please ignore this email.
-        </p>
-      </td>
-    </tr>
-  </table>
-</div>
-`;
+// const html = `
+// <div style="font-family: Arial, sans-serif; background-color: #f4f7fb; padding: 30px;">
+//   <table align="center" cellpadding="0" cellspacing="0" width="100%" 
+//          style="max-width: 500px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+//     <tr>
+//       <td style="padding: 25px 30px; text-align: center;">
+//         <img src="${process.env.FRONTEND_URL}/chat-message-heart-svgrepo-com.svg" 
+//              alt="ChatApp" style="width: 70px; margin-bottom: 10px;">
+//         <h2 style="color: #111; margin-bottom: 5px;">Verify Your ChatApp Account</h2>
+//         <p style="color: #555; font-size: 15px;">Hi ${user.name},</p>
+//         <p style="color: #666; font-size: 14px; line-height: 1.6;">
+//           Thanks for signing up! Please confirm your email address by clicking the button below.
+//         </p>
+//         <a href="${verifyUrl}" 
+//           style="display:inline-block; margin-top: 20px; padding: 12px 30px; background: linear-gradient(90deg,#4f46e5,#7c3aed);
+//           color: white; text-decoration: none; font-weight: 600; border-radius: 8px;">
+//           Verify My Email
+//         </a>
+//         <p style="margin-top: 25px; color: #999; font-size: 12px;">
+//           This link will expire in 10 minutes.<br>
+//           If you didn’t create an account, please ignore this email.
+//         </p>
+//       </td>
+//     </tr>
+//   </table>
+// </div>
+// `;
 
-    await sendEmail(user.email, "Verify Your ChatApp Account", html);
+//     await sendEmail(user.email, "Verify Your ChatApp Account", html);
 
     res.status(201).json({
       _id: user._id,
@@ -84,7 +84,7 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user)
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "User does not exist" });
 
     // REMOVE THIS (email verification step)
     // if (!user.isVerified) {
