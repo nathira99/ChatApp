@@ -12,7 +12,7 @@ export default function MessageList({ messages, currentUserId }) {
   const renderFile = (msg) => {
     if (!msg.fileUrl) return null;
 
-    const backend = import.meta.env.VITE_BACKEND_URL;
+    const backend = import.meta.env.VITE_SOCKET_URL;
 
     const fileUrl = msg.fileUrl.startsWith("http")
       ? msg.fileUrl
