@@ -37,7 +37,7 @@ export default function SettingsPage() {
       setName(u.name || "");
       setAbout(u.about || "");
       setStatus(u.status || "online");
-      setPreview(getAvatarUrl(u.avatar));
+      setPreview(res.data.user.avatar);
     } catch (err) {
       console.error("Failed to load settings:", err);
     } finally {
