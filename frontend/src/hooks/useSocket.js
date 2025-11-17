@@ -5,7 +5,7 @@ export const useSocket = () => {
   const socket = useRef(null);
 
   useEffect(() => {
-    socket.current = io("http://localhost:5000", {
+    socket.current = io("http://localhost:", {
       withCredentials: true,
       transports: ["websocket"],
     });

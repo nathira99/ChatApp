@@ -12,9 +12,11 @@ export default function MessageList({ messages, currentUserId }) {
   const renderFile = (msg) => {
     if (!msg.fileUrl) return null;
 
+    const backend = import.meta.env.VITE_BACKEND_URL;
+
     const fileUrl = msg.fileUrl.startsWith("http")
       ? msg.fileUrl
-      : `http://localhost:5000${msg.fileUrl}`;
+      : `${backend}${msg.fileUrl}`;
 
     const isImage = msg.fileType?.startsWith("image/");
     const isVideo = msg.fileType?.startsWith("video/");
