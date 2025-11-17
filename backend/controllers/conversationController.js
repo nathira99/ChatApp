@@ -61,14 +61,17 @@ exports.getConversations = async (req, res) => {
   }
 };
 
-// POST /api/conversations  -> start or return existing 1:1 conversation
+// POST /api/conversations -> start or return an existing 1:1 conversation
 exports.startChat = async (req, res) => {
   try {
     const myId = req.user._id;
     const { userId } = req.body;
 
-    if (!userId) return res.status(400).json({ error: "userId required" });
+    if (!userId) {
+      return res.status(400).json({ error: "userId required" });
+    }
 
+    // 🔍 Find or create conversation
     let convo = await Conversation.findOne({
       isGroup: false,
       members: { $all: [myId, userId] },
@@ -83,12 +86,19 @@ exports.startChat = async (req, res) => {
       });
     }
 
+    // 🧩 Populate members
     const populated = await convo.populate("members", "name email avatar");
 
+    // Identify the "other" user
     const otherUser = populated.members.find(
       (m) => m._id.toString() !== myId.toString()
     );
 
+    if (!otherUser) {
+      return res.status(500).json({ error: "Conversation members invalid" });
+    }
+
+    // 🔥 Prepare response payload (matches frontend expectations)
     const payload = {
       _id: populated._id,
       isGroup: false,
@@ -104,19 +114,20 @@ exports.startChat = async (req, res) => {
       lastMessageTime: populated.lastMessageTime || null,
     };
 
-    // Emit real-time update to both participants (so frontend can refresh)
+    // 📡 Emit real-time event to both users
     try {
       const io = req.app.get("io");
       if (io) {
-        // Emit to the rooms of both users (we assume socket joins rooms with user id)
-        io.to(String(userId)).emit("conversation:created", payload);
         io.to(String(myId)).emit("conversation:created", payload);
+        io.to(String(userId)).emit("conversation:created", payload);
       }
     } catch (emitErr) {
       console.warn("⚠ emit conversation:created failed:", emitErr);
     }
 
+    // Final response
     return res.json(payload);
+
   } catch (err) {
     console.error("❌ startChat error:", err);
     return res.status(500).json({ error: "Server error starting chat" });
