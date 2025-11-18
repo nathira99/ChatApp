@@ -93,12 +93,12 @@ export default function Login() {
 
         {/* Links */}
         <div className="mt-6 text-center space-y-2">
-          <button
+          {/* <button
             onClick={() => navigate("/forgot-password")}
             className="text-sm text-blue-600 hover:underline"
           >
             Forgot your password?
-          </button>
+          </button> */}
 
           <div className="text-sm text-gray-500">
             Don’t have an account?{" "}
