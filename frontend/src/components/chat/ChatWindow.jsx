@@ -205,7 +205,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
       {/* HEADER: back button visible only on mobile (sm:hidden) */}
       <div className="px-4 py-2 border-b bg-white dark:bg-gray-800 flex items-center justify-between sm:mt-16">
         <div className="flex items-center gap-3">
-          <button onClick={onClose} className="block sm:hidden p-2">
+          <button onClick={onClose} className="block sm:hidden p-2 dark:text-gray-200">
             <ArrowLeft className="w-6 h-6" />
           </button>
 
@@ -252,7 +252,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
             onClick={() => setMenuOpen((p) => !p)}
             className="p-2 rounded-full"
           >
-            <MoreVertical className="w-5 h-5 text-gray-600" />
+            <MoreVertical className="w-5 h-5 text-gray-600 dark:text-gray-200" />
           </button>
 
           {menuOpen && (
