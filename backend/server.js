@@ -47,6 +47,7 @@ const io = initSocket(server);
 // ✅ Make io accessible to controllers
 const groupController = require("./controllers/groupController");
 groupController.setIO(io);
+
 app.set("io", io);
 
 const allowedOrigins = ["http://localhost:5173", "https://chatapp90.netlify.app"];
