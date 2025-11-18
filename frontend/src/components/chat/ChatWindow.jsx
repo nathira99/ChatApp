@@ -203,8 +203,12 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 dark:text-gray-200">
       {/* HEADER: back button visible only on mobile (sm:hidden) */}
-<div className="bg-white dark:bg-gray-800 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b flex items-center justify-between">        <div className="flex items-center gap-3">
-          <button onClick={onClose} className="block sm:hidden p-2 dark:text-gray-200">
+      <div className="bg-white dark:bg-gray-800 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b flex items-center justify-between pt-16">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="block sm:hidden p-2 dark:text-gray-200"
+          >
             <ArrowLeft className="w-6 h-6" />
           </button>
 
@@ -296,7 +300,8 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
                     alert("Report submitted successfully");
                   } catch (err) {
                     console.error("❌ Report failed:", err);
-                    const msg = err?.response?.data?.message || "Failed to submit report";
+                    const msg =
+                      err?.response?.data?.message || "Failed to submit report";
                     alert(msg);
                   }
                 }}
@@ -307,7 +312,9 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
 
               {!chat.isGroup && (
                 <button
-                  onClick={() => alert("Block user functionality not yet implemented")}
+                  onClick={() =>
+                    alert("Block user functionality not yet implemented")
+                  }
                   className="w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
                 >
                   <Ban size={14} /> Block
