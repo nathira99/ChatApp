@@ -170,7 +170,7 @@ export default function Sidebar({ onSelectChat }) {
 
           <button
             onClick={() => setActiveTab("groups")}
-            className={`flex-1 py-1 rounded ${activeTab === "groups" ? "bg-gray-200 dark:bg-gray-500 text-blue-600" : "text-gray-500"}`}
+            className={`flex-1 py-1 rounded ${activeTab === "groups" ? "bg-gray-200 dark:bg-gray-500 dark:text-white text-blue-600" : "text-gray-500"}`}
           >
             Groups
           </button>
