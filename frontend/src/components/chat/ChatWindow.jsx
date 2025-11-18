@@ -345,7 +345,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
       </div>
 
       {/* INPUT ALWAYS AT BOTTOM */}
-      <div className="border-t sticky bottom-0 left-0 w-full bg-white dark:bg-gray-800 p-2">
+      <div className="border-t bg-white dark:bg-gray-800 p-2">
         <MessageInput onSend={handleSend} onFileSend={handleFileSend} />
       </div>
 
