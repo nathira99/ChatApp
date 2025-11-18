@@ -156,7 +156,7 @@ const handleExitGroup = async () => {
         ← Back
       </button>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+      <div className="bg-white dark:bg-gray-800 dark:text-gray-200 rounded-xl shadow p-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center text-2xl font-semibold">
