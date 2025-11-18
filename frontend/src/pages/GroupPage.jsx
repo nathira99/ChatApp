@@ -142,7 +142,7 @@ export default function GroupPage() {
       </aside>
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col h-full">
         {selectedGroup ? (
           <>
             <div className="p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
