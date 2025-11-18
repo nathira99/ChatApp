@@ -113,4 +113,3 @@ For deployment, ensure secure secrets, set appropriate storage for uploads, and 
 - Frontend: https://chatapp90.netlify.app/
 - Backend API: https://chatapp-2tg3.onrender.com (set as FRONTEND/Vite env: VITE_API_URL)
 - Socket server: wss://chatapp-2tg3.onrender.com (set as VITE_SOCKET_URL)
-- Static uploads: https://chatapp-2tg3.onrender.com/uploads/

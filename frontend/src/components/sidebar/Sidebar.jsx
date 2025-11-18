@@ -163,14 +163,14 @@ export default function Sidebar({ onSelectChat }) {
         <div className="m-1 flex gap-2">
           <button
             onClick={() => setActiveTab("chats")}
-            className={`flex-1 py-1 rounded ${activeTab === "chats" ? "bg-gray-200 dark:bg-gray-700 text-blue-600" : "text-gray-500"}`}
+            className={`flex-1 py-1 rounded ${activeTab === "chats" ? "bg-gray-200 dark:bg-gray-500 text-blue-600" : "text-gray-500"}`}
           >
             People
           </button>
 
           <button
             onClick={() => setActiveTab("groups")}
-            className={`flex-1 py-1 rounded ${activeTab === "groups" ? "bg-gray-200 dark:bg-gray-700 text-blue-600" : "text-gray-500"}`}
+            className={`flex-1 py-1 rounded ${activeTab === "groups" ? "bg-gray-200 dark:bg-gray-500 text-blue-600" : "text-gray-500"}`}
           >
             Groups
           </button>

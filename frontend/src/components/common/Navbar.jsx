@@ -14,10 +14,6 @@ export default function Navbar() {
   if (!user) return null;
 
   const hideNavbarRoutes = [
-    // "/admin",
-    // "/admin/users",
-    // "/admin/groups",
-    // "/admin/reports",
     "/chat",
   ];
 
@@ -54,7 +50,7 @@ export default function Navbar() {
         </button>
 
         {open && (
-          <div className="absolute z-10 right-0 mt-2 bg-white dark:bg-gray-700 shadow-lg rounded-lg py-2 w-40 border border-gray-200 dark:border-gray-600">
+          <div className="absolute z-10 right-0 mt-2 bg-white dark:bg-gray-500 shadow-lg rounded-lg py-2 w-40 border border-gray-200 dark:border-gray-600">
             <button
               onClick={goToUser}
               className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
@@ -74,13 +70,13 @@ export default function Navbar() {
             <hr className="my-1 border-gray-300 dark:border-gray-600" />
             <button
             onClick={() => navigate("/profile")}
-            className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition"
+            className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition dark:text-gray-200 dark:hover:bg-gray-600"
           >
               <User size={18} /> Profile
             </button>
             <button
             onClick={() => navigate("/settings")}
-            className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition"
+            className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition dark:text-gray-200 dark:hover:bg-gray-600"
           >
             <Settings size={18} /> Settings
             </button>
