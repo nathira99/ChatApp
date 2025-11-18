@@ -150,7 +150,7 @@ export default function AdminReports() {
               </p>
 
               {/* Actions */}
-              <div className="flex flex-wrap gap-6 mt-4 justify-end items-center max-sm:flex-col">
+              <div className="flex flex-wrap gap-6 mt-4 justify-end items-center max-sm:flex-col dark:bg-gray-800">
 
                 {/* Change report status */}
                 <select
