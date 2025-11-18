@@ -3,7 +3,7 @@ import api from "./api";
 
 // Attach auth token
 const tokenHeader = () => ({
-  headers: { Authorization: Bearer ${localStorage.getItem("token")} },
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
 // ==============================
@@ -32,7 +32,7 @@ export const getUserGroups = async () => {
 // ==============================
 export const searchUsers = async (q) => {
   const res = await api.get(
-    /api/users?search=${encodeURIComponent(q)},
+    `/api/users?search=${encodeURIComponent(q)}`,
     tokenHeader()
   );
   return res.data || [];
