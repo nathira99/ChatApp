@@ -244,7 +244,7 @@ const handleExitGroup = async () => {
                       <p className="font-medium text-gray-800 dark:text-gray-200">
                         {user.name}
                       </p>
-                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-100">{user.email}</p>
                     </div>
                     <button
                       onClick={() => handleAddMember(user._id)}
