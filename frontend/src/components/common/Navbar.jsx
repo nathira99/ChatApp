@@ -50,7 +50,7 @@ export default function Navbar() {
         </button>
 
         {open && (
-          <div className="absolute z-10 right-0 mt-2 bg-white dark:bg-gray-500 shadow-lg rounded-lg py-2 w-40 border border-gray-200 dark:border-gray-600">
+          <div className="absolute z-10 right-0 mt-2 bg-white dark:bg-gray-800 shadow-lg rounded-lg py-2 w-40 border border-gray-200 dark:border-gray-600">
             <button
               onClick={goToUser}
               className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
