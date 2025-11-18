@@ -69,7 +69,7 @@ export default function AdminUsers() {
         User Management
       </h1>
 
-      <div className="max-w-[90vw] overflow-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+      <div className="max-w-[90vw] overflow-auto bg-white dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl">
   <table className="min-w-[600px] text-sm ">
     <thead className="bg-gray-100 dark:bg-gray-700">
       <tr>
