@@ -144,7 +144,7 @@ export default function SettingsPage() {
     );
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gray-100 dark:bg-gray-950">
+    <div className="min-h-screen flex justify-center items-center bg-gray-100 dark:bg-gray-950 dark:text-gray-200">
       <div className="w-full max-w-lg bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-6 border">
 
         <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
