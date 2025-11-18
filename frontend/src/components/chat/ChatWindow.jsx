@@ -203,7 +203,7 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 dark:text-gray-200">
       {/* HEADER: back button visible only on mobile (sm:hidden) */}
-      <div className="bg-white dark:bg-gray-800 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b flex items-center justify-between sm:pt-16 sm:mt-2">
+      <div className="bg-white dark:bg-gray-800 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b dark:border-gray-700 flex items-center justify-between sm:pt-16 sm:mt-2">
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
