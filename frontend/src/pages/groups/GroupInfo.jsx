@@ -148,7 +148,7 @@ const handleExitGroup = async () => {
     );
 
   return (
-    <div className="max-w-screen h-screen mx-auto p-6 dark:bg-slate-700">
+    <div className="max-w-4xl mx-auto p-6 dark:bg-slate-700">
       <button
         onClick={() => navigate(-1)}
         className="mb-4 text-blue-600 hover:underline"
@@ -244,7 +244,7 @@ const handleExitGroup = async () => {
                       <p className="font-medium text-gray-800 dark:text-gray-200">
                         {user.name}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-300">{user.email}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-100">{user.email}</p>
                     </div>
                     <button
                       onClick={() => handleAddMember(user._id)}
