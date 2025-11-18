@@ -91,6 +91,7 @@ export default function App() {
                 </AdminRoute>
               }
             >
+              <Route index element={<AdminUsers />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="groups" element={<AdminGroups />} />
               <Route path="reports" element={<AdminReports />} />
