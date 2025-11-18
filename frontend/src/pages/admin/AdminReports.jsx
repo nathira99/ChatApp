@@ -156,7 +156,7 @@ export default function AdminReports() {
                 <select
                   value={r.status}
                   onChange={(e) => handleStatusChange(r._id, e.target.value)}
-                  className="border px-3 py-1 rounded-lg text-sm "
+                  className="border px-3 py-1 rounded-lg text-sm dark:text-gray-700"
                 >
                   <option value="pending">Pending</option>
                   <option value="reviewed">Reviewed</option>
