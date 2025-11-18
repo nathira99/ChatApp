@@ -137,7 +137,7 @@ export default function AdminReports() {
               className="bg-white dark:bg-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-xl p-4 shadow-sm"
             >
               {/* Report details */}
-              <p className="text-sm text-gray-700 dark:text-gray-200">
+              <p className="text-sm text-gray-700 dark:text-gray-200 dark:bg-gray-800">
                 <b>{reporter}</b> reported{" "}
                 <b>{targetType === "user" ? "User" : "Group"}:</b>{" "}
                 {targetName}
