@@ -148,7 +148,7 @@ const handleExitGroup = async () => {
     );
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6 dark:bg-slate-700">
       <button
         onClick={() => navigate(-1)}
         className="mb-4 text-blue-600 hover:underline"
