@@ -11,7 +11,7 @@ const tokenHeader = () => ({
 // ==============================
 export const getConversations = async () => {
   try {
-    const res = await api.get("/api/conversations", tokenHeader());
+    const res = await api.get("/conversations", tokenHeader());
     return res.data || [];
   } catch (err) {
     console.error("❌ getConversations error:", err);
@@ -23,7 +23,7 @@ export const getConversations = async () => {
 // GET User Groups
 // ==============================
 export const getUserGroups = async () => {
-  const res = await api.get("/api/groups/my", tokenHeader());
+  const res = await api.get("/groups/my", tokenHeader());
   return res.data || [];
 };
 
@@ -32,7 +32,7 @@ export const getUserGroups = async () => {
 // ==============================
 export const searchUsers = async (q) => {
   const res = await api.get(
-    `/api/users?search=${encodeURIComponent(q)}`,
+    `/users?search=${encodeURIComponent(q)}`,
     tokenHeader()
   );
   return res.data || [];
@@ -43,7 +43,7 @@ export const searchUsers = async (q) => {
 // ==============================
 export const createConversation = async (userId) => {
   const res = await api.post(
-    "/api/conversations",
+    "/conversations",
     { userId },
     tokenHeader()
   );
