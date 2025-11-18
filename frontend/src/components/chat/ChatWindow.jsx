@@ -201,9 +201,9 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
     );
 
   return (
-    <div className="flex flex-col h-full w-full bg-gray-50 dark:bg-gray-900 dark:text-gray-200">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 dark:text-gray-200">
       {/* HEADER: back button visible only on mobile (sm:hidden) */}
-      <div className="sm:fixed sm:inset-x-0 sm:top-0 sm:z-10 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b bg-white dark:bg-gray-800 flex items-center justify-between sm:mt-16">
+      <div className="sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b bg-white dark:bg-gray-800 flex items-center justify-between sm:mt-16">
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="block sm:hidden p-2 dark:text-gray-200">
             <ArrowLeft className="w-6 h-6" />
@@ -330,12 +330,19 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
           />
         </div>
       )}
+<div className="flex flex-col flex-1 overflow-hidden">
 
-      {/* MESSAGES */}
-      <MessageList messages={filteredMessages} currentUserId={user?._id} />
+      {/* MESSAGES SCROLL AREA */}
+      <div className="flex-1 overflow-y-auto">
+        <MessageList messages={filteredMessages} currentUserId={user?._id} />
+      </div>
 
-      {/* INPUT */}
-      <MessageInput onSend={handleSend} onFileSend={handleFileSend} />
+      {/* INPUT ALWAYS AT BOTTOM */}
+      <div className="border-t bg-white dark:bg-gray-800 p-2">
+        <MessageInput onSend={handleSend} onFileSend={handleFileSend} />
+      </div>
+
     </div>
+  </div>
   );
 }

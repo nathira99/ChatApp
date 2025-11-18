@@ -186,7 +186,7 @@ export default function GroupPage() {
 
             <form
               onSubmit={handleSendMessage}
-              className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex gap-3"
+              className="bg-white dark:bg-gray-800  border-t border-gray-200 dark:border-gray-700 flex gap-2 p-2"
             >
               <input
                 type="text"
