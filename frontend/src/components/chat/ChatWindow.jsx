@@ -337,11 +337,19 @@ export default function ChatWindow({ chat, onClose, onMessageUpdate }) {
         </div>
       )}
 
-      {/* MESSAGES */}
-      <MessageList messages={filteredMessages} currentUserId={user?._id} />
+      <div className="flex flex-col flex-1 overflow-hidden">
 
-      {/* INPUT */}
-      <MessageInput onSend={handleSend} onFileSend={handleFileSend} />
+      {/* MESSAGES SCROLL AREA */}
+      <div className="flex-1 overflow-y-auto">
+        <MessageList messages={filteredMessages} currentUserId={user?._id} />
+      </div>
+
+      {/* INPUT ALWAYS AT BOTTOM */}
+      <div className="border-t bg-white dark:bg-gray-800 p-2">
+        <MessageInput onSend={handleSend} onFileSend={handleFileSend} />
+      </div>
+
     </div>
-  );
+  </div>
+);
 }
