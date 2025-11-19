@@ -64,7 +64,7 @@ exports.sendMessage = async (req, res) => {
   }
 };
 
-/* ----------------------------- SEND FILE MESSAGE ----------------------------- */
+/* ----------------------------- SEND FILE MESSAGE (CLOUDINARY) ----------------------------- */
 exports.sendFileMessage = async (req, res) => {
   try {
     const file = req.file;
@@ -73,7 +73,7 @@ exports.sendFileMessage = async (req, res) => {
     const { receiverId } = req.body;
     const senderId = req.user._id;
 
-    // 🔒 Check pair block before sending
+    // Check if users blocked each other
     const pairBlocked = await Block.exists({
       $or: [
         { blocker: senderId, blocked: receiverId },
@@ -83,28 +83,39 @@ exports.sendFileMessage = async (req, res) => {
     if (pairBlocked)
       return res.status(403).json({ message: "File sharing blocked between these users." });
 
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
-
+    // Detect file type
     let messageType = "file";
     if (file.mimetype.startsWith("image/")) messageType = "image";
     else if (file.mimetype.startsWith("video/")) messageType = "video";
     else if (file.mimetype.startsWith("audio/")) messageType = "audio";
     else messageType = "document";
 
+    // Create message with Cloudinary URL
     const message = await Message.create({
       sender: senderId,
       receiver: receiverId,
       content: file.originalname,
-      fileUrl: `${baseUrl}/uploads/${file.filename}`,
+      fileUrl: file.path,         
       fileType: file.mimetype,
       fileName: file.originalname,
       fileSize: file.size,
       type: messageType,
     });
 
-    const populated = await message.populate("sender", "name email");
+    const populated = await message.populate([
+      {
+        path: "sender",
+        select: "name email",
+      },
+      {
+        path: "receiver",
+        select: "name email",
+      }
+    ]);
 
-    if (req.io) req.io.to(receiverId.toString()).emit("message:receive", populated);
+    // Emit real-time message
+    if (req.io)
+      req.io.to(receiverId.toString()).emit("message:receive", populated);
 
     res.status(201).json(populated);
   } catch (error) {
