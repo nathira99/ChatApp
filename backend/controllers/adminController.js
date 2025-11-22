@@ -146,6 +146,8 @@ exports.listGroups = async (req, res) => {
   try {
     const groups = await Group.find()
       .populate("members", "name email")
+      .populate("creator", "name email")
+      
       .populate("admins", "name email")
       .lean();
     res.json(groups);

@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
 //          style="max-width: 500px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
 //     <tr>
 //       <td style="padding: 25px 30px; text-align: center;">
-//         <img src="${process.env.FRONTEND_URL}/chat-message-heart-svgrepo-com.svg" 
+//         <img src="https://res.cloudinary.com/dkl8879qg/image/upload/v1763818951/chat-message-heart-svgrepo-com_rbutlj.svg" 
 //              alt="ChatApp" style="width: 70px; margin-bottom: 10px;">
 //         <h2 style="color: #111; margin-bottom: 5px;">Verify Your ChatApp Account</h2>
 //         <p style="color: #555; font-size: 15px;">Hi ${user.name},</p>
@@ -166,7 +166,7 @@ exports.forgotPassword = async (req, res) => {
          style="max-width: 500px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
     <tr>
       <td style="padding: 25px 30px; text-align: center;">
-        <img src="${process.env.FRONTEND_URL}/public/chat-message-heart-svgrepo-com.svg" 
+        <img src="https://res.cloudinary.com/dkl8879qg/image/upload/v1763818951/chat-message-heart-svgrepo-com_rbutlj.svg" 
              alt="ChatApp" style="width: 60px; margin-bottom: 10px;">
         <h2 style="color: #111; margin-bottom: 5px;">Reset Your Password</h2>
         <p style="color: #555; font-size: 15px;">Hi ${user.name},</p>
@@ -239,7 +239,9 @@ exports.updateProfile = async (req, res) => {
     if (req.body.name) user.name = req.body.name;
     if (req.body.about) user.about = req.body.about;
     if (req.body.status) user.status = req.body.status;
-    if (req.file) user.avatar = req.file.path;
+    if (req.file && req.file.path) {
+      user.avatar = req.file.path;
+    }
 
     await user.save();
 if (req.app.get("io")) {

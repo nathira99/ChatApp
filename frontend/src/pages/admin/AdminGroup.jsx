@@ -43,7 +43,7 @@ export default function AdminGroups() {
     return <div className="text-center text-gray-400 mt-10">No groups found.</div>;
 
   return (
-    <div className="p-6">
+    <div className="p-6 mb-10">
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">
         Group Management
       </h1>

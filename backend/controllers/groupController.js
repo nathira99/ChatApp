@@ -63,7 +63,7 @@ exports.getMyGroups = async (req, res) => {
 exports.createGroup = async (req, res) => {
   try {
     const { name, description = "", members = [], isPrivate = false } = req.body;
-    if (!name) return res.status(400).json({ message: "Group name is required" });
+    if (!name.trim()) return res.status(400).json({ message: "Group name is required" });
 
     const creatorId = req.user._id.toString();
     const uniqueMembers = Array.from(new Set([...members, creatorId]));
@@ -77,8 +77,13 @@ exports.createGroup = async (req, res) => {
       isPrivate,
     });
 
+    const populated = await Group.findById(group._id).populate(
+      "creator members admins",
+      "name email avatar"
+    );
+
     await pushAudit(group._id, "create_group", req.user._id, { name });
-    res.status(201).json(group);
+    res.status(201).json(populated);
   } catch (err) {
     console.error("Error creating group:", err);
     res.status(500).json({ message: "Server error creating group" });
@@ -279,7 +284,10 @@ exports.sendGroupMessage = async (req, res) => {
     if (!content)
       return res.status(400).json({ message: "Message content required" });
 
-    const group = await Group.findById(groupId);
+    const group = await Group.findById(groupId)
+      .populate("members", "name email")
+      .populate("admins", "name email")
+      .populate("creator", "name email");
     if (!group) return res.status(404).json({ message: "Group not found" });
 
     if (!group.members.includes(senderId))

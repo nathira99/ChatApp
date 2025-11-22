@@ -64,7 +64,7 @@ export default function AdminUsers() {
     );
 
   return (
-    <div className="p-2">
+    <div className="p-2 mb-10 ">
       <h1 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
         User Management
       </h1>
@@ -75,6 +75,7 @@ export default function AdminUsers() {
       <tr>
         <th className="p-3 text-left">Name</th>
         <th className="p-3 text-left">Email</th>
+        <th className="p-3 text-center">Joined At</th>
         <th className="p-3 text-center">Status</th>
         <th className="p-3 text-center">Actions</th>
       </tr>
@@ -89,6 +90,10 @@ export default function AdminUsers() {
           <td className="p-3 font-medium whitespace-nowrap">{u.name}</td>
 
           <td className="p-3 whitespace-nowrap">{u.email}</td>
+
+          <td className="p-3 text-center whitespace-nowrap">
+            {new Date(u.createdAt).toLocaleString()}
+          </td>
 
           <td className="p-3 text-center whitespace-nowrap">
             <span
