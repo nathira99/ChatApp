@@ -274,24 +274,36 @@ exports.deleteGroup = async (req, res) => {
   }
 };
 
-// ✅ Send group message
+// ===============================================
+// Send Group Message
+// ===============================================
 exports.sendGroupMessage = async (req, res) => {
   try {
     const { content } = req.body;
     const groupId = req.params.groupId;
-    const senderId = req.user._id;
+    const senderId = req.user._id.toString();
 
     if (!content)
       return res.status(400).json({ message: "Message content required" });
 
     const group = await Group.findById(groupId)
-      .populate("members", "name email")
-      .populate("admins", "name email")
-      .populate("creator", "name email");
+      .populate("members", "_id name email")
+      .populate("admins", "_id name email")
+      .populate("creator", "_id name email");
+
     if (!group) return res.status(404).json({ message: "Group not found" });
 
-    if (!group.members.includes(senderId))
+    // membership check for populated docs + ObjectId arrays
+    const memberIds = group.members.map(m =>
+      m._id ? m._id.toString() : m.toString()
+    );
+
+    if (!memberIds.includes(senderId)) {
+      console.log("403 → user is NOT in this group");
+      console.log("senderId:", senderId);
+      console.log("members:", memberIds);
       return res.status(403).json({ message: "You are not a member of this group" });
+    }
 
     const message = await Message.create({
       sender: senderId,
@@ -307,43 +319,49 @@ exports.sendGroupMessage = async (req, res) => {
       lastMessageAt: new Date(),
       lastMessageSender: senderId,
       lastMessageSenderName: sender.name,
-     });
-
-     await group.save();
+    });
 
     const populated = await message.populate("sender", "name email avatar");
 
-    // Emit message via socket.io
+    // SOCKET EVENT – must match frontend listener
     if (req.io) {
-      req.io.to(groupId.toString()).emit("group:message", populated);
+      req.io.to(groupId.toString()).emit("group:message:receive", populated);
     }
 
-    res.status(201).json(populated);
+    return res.status(201).json(populated);
   } catch (err) {
-    console.error("Error sending group message:", err);
+    console.error("❌ Error sending group message:", err);
     res.status(500).json({ message: "Error sending message" });
   }
 };
 
-// ✅ Get group messages
+
+
+// ===============================================
+// Get Group Messages
+// ===============================================
 exports.getGroupMessages = async (req, res) => {
   try {
     const groupId = req.params.groupId;
-    const userId = req.user._id;
+    const userId = req.user._id.toString();
 
-    const group = await Group.findById(groupId);
+    const group = await Group.findById(groupId).populate("members", "_id");
     if (!group) return res.status(404).json({ message: "Group not found" });
 
-    if (!group.members.includes(userId))
+    const memberIds = group.members.map(m =>
+      m._id ? m._id.toString() : m.toString()
+    );
+
+    if (!memberIds.includes(userId))
       return res.status(403).json({ message: "You are not a member of this group" });
 
     const messages = await Message.find({ group: groupId })
       .populate("sender", "name email")
       .sort({ createdAt: 1 });
 
-    res.json(messages);
+    return res.json(messages);
   } catch (err) {
-    console.error("Error fetching group messages:", err);
+    console.error("❌ Error fetching group messages:", err);
     res.status(500).json({ message: "Error fetching group messages" });
   }
 };
