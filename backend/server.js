@@ -50,6 +50,11 @@ groupController.setIO(io);
 
 app.set("io", io);
 
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 const allowedOrigins = ["http://localhost:5173", "https://chatapp90.netlify.app"];
 
 // ✅ Static file handler with proper MIME for media
