@@ -2,7 +2,6 @@ const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const sendEmail = require("../utils/sendEmail");
 const { error } = require("console");
 
 // Register
@@ -29,38 +28,6 @@ exports.register = async (req, res) => {
       verificationExpires: Date.now() + 10 * 60 * 1000,
     });
 
-//     const verifyUrl = `${process.env.FRONTEND_URL}/verify/${verificationToken}`;
-
-// const html = `
-// <div style="font-family: Arial, sans-serif; background-color: #f4f7fb; padding: 30px;">
-//   <table align="center" cellpadding="0" cellspacing="0" width="100%" 
-//          style="max-width: 500px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-//     <tr>
-//       <td style="padding: 25px 30px; text-align: center;">
-//         <img src="https://res.cloudinary.com/dkl8879qg/image/upload/v1763818951/chat-message-heart-svgrepo-com_rbutlj.svg" 
-//              alt="ChatApp" style="width: 70px; margin-bottom: 10px;">
-//         <h2 style="color: #111; margin-bottom: 5px;">Verify Your ChatApp Account</h2>
-//         <p style="color: #555; font-size: 15px;">Hi ${user.name},</p>
-//         <p style="color: #666; font-size: 14px; line-height: 1.6;">
-//           Thanks for signing up! Please confirm your email address by clicking the button below.
-//         </p>
-//         <a href="${verifyUrl}" 
-//           style="display:inline-block; margin-top: 20px; padding: 12px 30px; background: linear-gradient(90deg,#4f46e5,#7c3aed);
-//           color: white; text-decoration: none; font-weight: 600; border-radius: 8px;">
-//           Verify My Email
-//         </a>
-//         <p style="margin-top: 25px; color: #999; font-size: 12px;">
-//           This link will expire in 10 minutes.<br>
-//           If you didn’t create an account, please ignore this email.
-//         </p>
-//       </td>
-//     </tr>
-//   </table>
-// </div>
-// `;
-
-//     await sendEmail(user.email, "Verify Your ChatApp Account", html);
-
     res.status(201).json({
       _id: user._id,
       name: user.name,
@@ -86,10 +53,6 @@ exports.login = async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "User does not exist" });
 
-    // REMOVE THIS (email verification step)
-    // if (!user.isVerified) {
-    //   return res.status(400).json({ message: "Please verify your email first" });
-    // }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
@@ -121,24 +84,8 @@ exports.logout = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-// Verify email
-// exports.verifyEmail = async (req, res) => {
-//   const { token } = req.params;
-//   const user = await User.findOne({
-//     verificationToken: token,
-//     verificationExpires: { $gt: Date.now() },
-//   });
 
-//   if (!user)
-//     return res.status(400).json({ message: "Invalid or expired token" });
 
-//   user.isVerified = true;
-//   user.verificationToken = undefined;
-//   user.verificationExpires = undefined;
-//   await user.save();
-
-//   res.json({ message: "Email verified successfully" });
-// };
 // Forgot Password
 exports.forgotPassword = async (req, res) => {
   try {
@@ -157,42 +104,6 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 min
     await user.save({ validateBeforeSave: false });
 
-    // 3️⃣ Send email with the plain token
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-   const html = `
-<div style="font-family: Arial, sans-serif; background-color: #f4f7fb; padding: 30px;">
-  <table align="center" cellpadding="0" cellspacing="0" width="100%" 
-         style="max-width: 500px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-    <tr>
-      <td style="padding: 25px 30px; text-align: center;">
-        <img src="https://res.cloudinary.com/dkl8879qg/image/upload/v1763818951/chat-message-heart-svgrepo-com_rbutlj.svg" 
-             alt="ChatApp" style="width: 60px; margin-bottom: 10px;">
-        <h2 style="color: #111; margin-bottom: 5px;">Reset Your Password</h2>
-        <p style="color: #555; font-size: 15px;">Hi ${user.name},</p>
-        <p style="color: #666; font-size: 14px; line-height: 1.6;">
-          You requested to reset your ChatApp password. Click below to reset it.
-        </p>
-        <a href="${resetUrl}" 
-          style="display:inline-block; margin-top: 20px; padding: 12px 30px; background: linear-gradient(90deg,#4f46e5,#7c3aed);
-          color: white; text-decoration: none; font-weight: 600; border-radius: 8px;">
-          Reset My Password
-        </a>
-        <p style="margin-top: 25px; color: #999; font-size: 12px;">
-          This link will expire in 15 minutes.<br>
-          If you didn’t request a password reset, ignore this message.
-        </p>
-      </td>
-    </tr>
-  </table>
-</div>
-`;
-
-    await sendEmail({
-      to: user.email,
-      subject: "ChatApp Password Reset",
-      html,
-    });
     res.json({ message: "Reset link sent successfully" });
   } catch (err) {
     console.error("Forgot password error:", err);

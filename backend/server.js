@@ -1,7 +1,6 @@
 const path = require("path");
 const express = require("express");
 require("dotenv").config();
-const sendEmail = require("./utils/sendEmail");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const { createServer } = require("http");
@@ -25,20 +24,6 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-app.get("/test/resend", async (req, res) => {
-  try {
-    const result = await sendEmail(
-      "onboarding@resend.dev",
-      "Resend API Test",
-      "<p>If you see this email, your API key and sender are connected.</p>"
-    );
-
-    res.json({ success: true, result });
-  } catch (err) {
-    res.json({ success: false, error: err });
-  }
-});
 
 // ✅ Initialize HTTP + Socket.io
 const server = createServer(app);
