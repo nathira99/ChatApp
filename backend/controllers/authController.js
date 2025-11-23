@@ -2,57 +2,60 @@ const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const { error } = require("console");
 
-// Register
+// ===========================
+// REGISTER (NO EMAIL REQUIRED)
+// ===========================
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // 🔥 VALIDATION FIX — missing in your code
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Name, email and password are required" });
     }
 
     const existing = await User.findOne({ email });
-    if (existing)
+    if (existing) {
       return res.status(400).json({ message: "User already exists" });
-
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    }
 
     const user = await User.create({
       name,
       email,
       password,
-      verificationToken,
-      verificationExpires: Date.now() + 10 * 60 * 1000,
     });
 
+    // Auto-login immediately
+    const token = generateToken(user._id);
+
     res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      avatar: user.avatar,
-      isAdmin: user.isAdmin,
-      isVerified: true,
-    }, { message: "Verification email sent" });
+      message: "Registration successful",
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        isAdmin: user.isAdmin,
+      },
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Register error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// =======================================
-// LOGIN WITHOUT ANY EMAIL VERIFICATION
-// =======================================
+// ===========================
+// LOGIN (NO VERIFICATION REQUIRED)
+// ===========================
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-
     if (!user)
       return res.status(400).json({ message: "User does not exist" });
-
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
@@ -61,6 +64,7 @@ exports.login = async (req, res) => {
     const token = generateToken(user._id);
 
     res.json({
+      message: "Login successful",
       token,
       user: {
         _id: user._id,
@@ -76,7 +80,9 @@ exports.login = async (req, res) => {
   }
 };
 
-// Logout User
+// ===========================
+// LOGOUT
+// ===========================
 exports.logout = async (req, res) => {
   try {
     res.json({ message: "Logout successful" });
@@ -85,33 +91,9 @@ exports.logout = async (req, res) => {
   }
 };
 
-
-// Forgot Password
-exports.forgotPassword = async (req, res) => {
-  try {
-    const user = await User.findOne({ email: req.body.email });
-    if (!user)
-      return res.status(404).json({ message: "No user with that email" });
-
-    // 1️⃣ Generate plain reset token
-    const resetToken = crypto.randomBytes(32).toString("hex");
-
-    // 2️⃣ Hash and store in DB
-    user.resetPasswordToken = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
-    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 min
-    await user.save({ validateBeforeSave: false });
-
-    res.json({ message: "Reset link sent successfully" });
-  } catch (err) {
-    console.error("Forgot password error:", err);
-    res.status(500).json({ message: "Server error sending reset email" });
-  }
-};
-
-// Reset Password
+// ===========================
+// RESET PASSWORD (MANUAL TOKEN)
+// ===========================
 exports.resetPassword = async (req, res) => {
   try {
     const hashedToken = crypto
@@ -139,14 +121,14 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// Update User Profile
+// ===========================
+// UPDATE PROFILE
+// ===========================
 exports.updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    console.log("Profile update:", req.body);
-    console.log("File:", req.file);
     if (req.body.name) user.name = req.body.name;
     if (req.body.about) user.about = req.body.about;
     if (req.body.status) user.status = req.body.status;
@@ -155,15 +137,18 @@ exports.updateProfile = async (req, res) => {
     }
 
     await user.save();
-if (req.app.get("io")) {
-  req.app.get("io").emit("user:profile:update", {
-    _id: user._id,
-    name: user.name,
-    avatar: user.avatar,
-    status: user.status,
-    about: user.about,
-  });
-}
+
+    // emit real-time profile update
+    if (req.app.get("io")) {
+      req.app.get("io").emit("user:profile:update", {
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar,
+        status: user.status,
+        about: user.about,
+      });
+    }
+
     res.json({ message: "Profile updated", user });
   } catch (err) {
     console.error("Update profile error:", err);
@@ -171,7 +156,9 @@ if (req.app.get("io")) {
   }
 };
 
-// Get User Profile
+// ===========================
+// GET PROFILE
+// ===========================
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("-password");
@@ -179,6 +166,7 @@ exports.getProfile = async (req, res) => {
     if (!req.user) {
       return res.status(401).json({ message: "Not authorized" });
     }
+
     res.json(user);
   } catch (err) {
     console.error("Profile fetch error:", err);

@@ -5,10 +5,10 @@ import Navbar from "../components/common/Navbar";
 import CreateGroup from "../components/group/CreateGroup";
 
 export default function HomePage() {
-  const [activeChat, setActiveChat] = useState(null); // THE REAL CHAT STATE
+  const [activeChat, setActiveChat] = useState(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [conversations, setConversations] = useState([]);
-  const [showSidebar, setShowSidebar] = useState(true); // for mobile sidebar toggle
+  const [showSidebar, setShowSidebar] = useState(true); // mobile control
 
   useEffect(() => {
     const handler = () => setShowCreateGroup(true);
@@ -65,26 +65,24 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
-      {/* NAVBAR:
-          - Show always on desktop
-          - Hide on mobile when chat is active
-      */}
+      
+      {/* NAVBAR */}
       <div className={activeChat ? "hidden sm:block" : "block"}>
         <Navbar />
       </div>
 
-      {/* MAIN AREA */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden">
+
         {/* SIDEBAR */}
         <div
           className={`
-    w-72 bg-white dark:bg-gray-800 border-r border-gray-300 h-full z-40
-    fixed top-0 left-0
-    sm:static sm:block sm:pt-16
-    max-sm:w-full
-    transition-transform duration-200
-    ${activeChat ? "hidden sm:block" : "block"}
-  `}
+            w-72 bg-white dark:bg-gray-800 border-r border-gray-300 h-full z-40
+            fixed top-0 left-0
+            sm:static sm:block sm:pt-16
+            max-sm:w-full
+            transition-transform duration-200
+            ${activeChat ? "hidden sm:block" : "block"}
+          `}
         >
           <Sidebar
             onSelectChat={handleSelectChat}
@@ -94,33 +92,24 @@ export default function HomePage() {
           />
         </div>
 
-        {/* BACKDROP on mobile when Sidebar is open */}
+        {/* BACKDROP — mobile, when sidebar open (optional) */}
         {!activeChat && (
           <div className="sm:hidden inset-0 bg-black/40 z-30 pointer-events-auto" />
         )}
 
-        {/* DESKTOP CHAT AREA */}
-        <div className="flex-1 hidden sm:block overflow-hidden">
+        {/* SINGLE CHATWINDOW — WORKS FOR ALL SCREEN SIZES */}
+        <div className="flex-1 overflow-hidden">
           {activeChat ? (
             <ChatWindow chat={activeChat} onClose={handleCloseChat} />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">
-                <h2 className="text-xl font-semibold mb-2">
-                  Welcome to ChatApp
-                </h2>
+                <h2 className="text-xl font-semibold mb-2">Welcome to ChatApp</h2>
                 <p>Select a conversation to start chatting</p>
               </div>
             </div>
           )}
         </div>
-
-        {/* MOBILE FULLSCREEN CHAT */}
-        {activeChat && (
-          <div className="flex-1 sm:hidden">
-            <ChatWindow chat={activeChat} onClose={handleCloseChat} />
-          </div>
-        )}
       </div>
 
       {/* ------------------ CREATE GROUP MODAL ------------------ */}
@@ -138,20 +127,10 @@ export default function HomePage() {
                   admins: g.admins || [],
                   isGroup: true,
                 };
-
-                // Add to list
                 setConversations((prev) => [...prev, newGroup]);
-
-                // Open instantly
                 setActiveChat(newGroup);
-
-                // Hide sidebar on mobile
                 setShowSidebar(false);
-
-                // Close modal
                 setShowCreateGroup(false);
-
-                console.log("Redirected to new group:", newGroup);
               }}
             />
           </div>

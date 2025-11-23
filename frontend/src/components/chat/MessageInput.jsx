@@ -8,7 +8,7 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
   const typingTimeout = useRef(null);
   const fileInputRef = useRef(null);
 
-  // 🔹 Handle typing indicator
+  // Handle typing indicator
   const handleChange = (e) => {
     const value = e.target.value;
     setContent(value);
@@ -25,27 +25,30 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
     }, 1500);
   };
 
-  // 🔹 Handle send
+  // Send message or file
   const handleSend = (e) => {
     e.preventDefault();
     if (!content.trim() && !file) return;
 
+    // Stop typing indicator immediately
+    clearTimeout(typingTimeout.current);
+    setIsTyping(false);
+    onTyping?.(false);
+
+    // File first (so UI remains consistent)
     if (file && onFileSend) {
       onFileSend(file);
       setFile(null);
       fileInputRef.current.value = "";
     }
 
+    // Then text message
     if (content.trim()) {
       onSend?.(content.trim());
       setContent("");
     }
-
-    onTyping?.(false);
-    setIsTyping(false);
   };
 
-  // 🔹 File select
   const handleFileSelect = (e) => {
     const selected = e.target.files[0];
     if (selected) setFile(selected);
@@ -56,7 +59,9 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  useEffect(() => () => clearTimeout(typingTimeout.current), []);
+  useEffect(() => {
+    return () => clearTimeout(typingTimeout.current);
+  }, []);
 
   return (
     <div className="w-full border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
@@ -72,9 +77,10 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
         </div>
       )}
 
-      {/* Input Row */}
+      {/* Input Area */}
       <form onSubmit={handleSend} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg">
-        {/* Attach */}
+        
+        {/* File picker */}
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -82,10 +88,9 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
         >
           <Paperclip className="w-5 h-5" />
         </button>
+
         <input
           type="file"
-          id="chatFile"
-          name="chatFile"
           ref={fileInputRef}
           onChange={handleFileSelect}
           className="hidden"
@@ -99,6 +104,7 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
           <Smile className="w-5 h-5" />
         </button>
 
+        {/* Message input */}
         <input
           type="text"
           value={content}
@@ -107,6 +113,7 @@ export default function MessageInput({ onSend, onTyping, onFileSend }) {
           className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
         />
 
+        {/* Send button */}
         {content.trim() || file ? (
           <button
             type="submit"
