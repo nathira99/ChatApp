@@ -45,8 +45,8 @@ const server = createServer(app);
 const io = initSocket(server);
 
 // ✅ Make io accessible to controllers
-const groupController = require("./controllers/groupController");
-groupController.setIO(io);
+// const groupController = require("./controllers/groupController");
+// groupController.setIO(io);
 
 app.set("io", io);
 
