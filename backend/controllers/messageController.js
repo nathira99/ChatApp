@@ -55,8 +55,10 @@ exports.sendMessage = async (req, res) => {
     const populated = await message.populate("sender receiver", "name email");
 
     // 🔔 Emit new message
-    if (req.io) req.io.to(receiverId.toString()).emit("message:receive", populated);
-
+    if (req.io) {
+      req.io.to(receiverId.toString()).emit("message:receive", populated);
+      req.io.to(senderId.toString()).emit("message:receive", populated);
+    }
     res.status(201).json(populated);
   } catch (err) {
     console.error("❌ Error sending message:", err);
