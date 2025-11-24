@@ -47,7 +47,7 @@ const initSocket = (server) => {
 
       if (senderSocketId) {
         io.to(senderSocketId).emit("message:receive", data);
-        io.to(senderSocketId).emit("users:refresh");
+        // io.to(senderSocketId).emit("users:refresh");
       }
     });
 

@@ -11,7 +11,9 @@ exports.sendMessage = async (req, res) => {
     const senderId = req.user._id;
 
     if (!receiverId || !content) {
-      return res.status(400).json({ error: "Receiver and content are required." });
+      return res
+        .status(400)
+        .json({ error: "Receiver and content are required." });
     }
 
     // Block check
@@ -23,7 +25,9 @@ exports.sendMessage = async (req, res) => {
     });
 
     if (pairBlocked) {
-      return res.status(403).json({ error: "Messaging blocked between these users." });
+      return res
+        .status(403)
+        .json({ error: "Messaging blocked between these users." });
     }
 
     // Create message (plain text)
@@ -56,12 +60,20 @@ exports.sendMessage = async (req, res) => {
 
     // Emit real-time updates
     if (req.io) {
-      req.io.to(receiverId.toString()).emit("message:receive", populated);
-      req.io.to(senderId.toString()).emit("message:receive", populated);
+      req.io.to(receiverId.toString()).emit("message:receive", {
+        ...populated.toObject(),
+        conversationId: conversation._id,
+      });
+      req.io.to(senderId.toString()).emit("message:receive", {
+        ...populated.toObject(),
+        conversationId: conversation._id,
+      });
     }
 
-    res.status(201).json(populated);
-
+    res.status(201).json({
+      ...populated.toObject(),
+      conversationId: conversation._id,
+    });
   } catch (err) {
     console.error("❌ Error sending message:", err);
     res.status(500).json({ error: "Server error sending message" });
@@ -88,7 +100,9 @@ exports.sendFileMessage = async (req, res) => {
     });
 
     if (pairBlocked) {
-      return res.status(403).json({ message: "File sharing blocked between these users." });
+      return res
+        .status(403)
+        .json({ message: "File sharing blocked between these users." });
     }
 
     // Detect type
@@ -116,8 +130,10 @@ exports.sendFileMessage = async (req, res) => {
       req.io.to(senderId.toString()).emit("message:receive", populated);
     }
 
-    res.status(201).json(populated);
-
+    res.status(201).json({
+      ...populated.toObject(),
+      conversationId: conversation._id,
+    });
   } catch (error) {
     console.error("❌ File message error:", error);
     res.status(500).json({ message: "Server error sending file" });

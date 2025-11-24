@@ -30,7 +30,7 @@ export default function Sidebar({ onSelectChat }) {
     const notify = (chatId, title, body) => {
       console.log("NOTIFY → chatId:", chatId);
       console.log("UNREAD BEFORE:", unread);
-
+      
       if (chatId === activeChatId) return;
 
       setUnread((prev) => ({
@@ -46,6 +46,7 @@ export default function Sidebar({ onSelectChat }) {
           icon: "/logo192.png",
         });
       }
+
     };
 
     const privateListener = (msg) => {
@@ -209,6 +210,7 @@ export default function Sidebar({ onSelectChat }) {
 
     onSelectChat(convo);
   };
+
 
   /* ----------------------------------------------
      UI

@@ -26,7 +26,9 @@ function formatMessageTime(timestamp) {
   }/${date.getFullYear()}`;
 }
 
-export default function ConversationItem({ convo, active, onClick }) {
+export default function ConversationItem({ convo, active, onClick, unreadCount = 0 }) {
+    console.log("Conversation:", convo._id, "Unread:", unreadCount); 
+
   const me = JSON.parse(localStorage.getItem("user"))?._id;
   const isAdmin = convo.isGroup && convo.admins.includes(me);
 
@@ -44,9 +46,7 @@ export default function ConversationItem({ convo, active, onClick }) {
         ? `You: ${convo.lastMessage}`
         : `${convo.lastMessageSenderName || "Other"}:${convo.lastMessage}`;
     } else {
-      previewText = isYou
-        ? `You: ${convo.lastMessage}`
-        : convo.lastMessage;
+      previewText = isYou ? `You: ${convo.lastMessage}` : convo.lastMessage;
     }
   }
 
@@ -90,6 +90,13 @@ export default function ConversationItem({ convo, active, onClick }) {
         <p className="text-[10px] text-gray-400 whitespace-nowrap">
           {timeLabel}
         </p>
+      )}
+
+      {/* 🔴 unread badge */}
+      {unreadCount > 0 && (
+        <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full ml-2">
+          {unreadCount}
+        </span>
       )}
     </div>
   );

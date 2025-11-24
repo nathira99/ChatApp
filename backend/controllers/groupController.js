@@ -325,7 +325,10 @@ exports.sendGroupMessage = async (req, res) => {
 
     // SOCKET EVENT – must match frontend listener
     if (req.io) {
-      req.io.to(groupId.toString()).emit("group:message:receive", populated);
+      req.io.to(groupId.toString()).emit("group:message:receive", {
+        ...populated.toObject(),
+        conversationId: groupId,
+      });
       req.io.emit("groups:refresh");
     }
 
@@ -335,7 +338,6 @@ exports.sendGroupMessage = async (req, res) => {
     res.status(500).json({ message: "Error sending message" });
   }
 };
-
 
 
 // ===============================================
@@ -385,7 +387,10 @@ exports.uploadGroupFile = async (req, res) => {
 
     const populated = await message.populate("sender", "name email");
 
-    req.app.get("io")?.to(groupId).emit("group:message:receive", populated);
+    req.app.get("io")?.to(groupId).emit("group:message:receive", {
+      ...populated.toObject(),
+      conversationId: groupId,
+    });
     req.app.get("io")?.emit("groups:refresh");
 
     res.status(201).json(populated);

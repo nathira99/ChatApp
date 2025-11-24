@@ -59,7 +59,7 @@ PORT=5000
 MONGO_URI=<your_mongo_connection_string>
 JWT_SECRET=<strong_jwt_secret>
 ENCRYPTION_KEY=<aes_key_for_messages>
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:5174
 
 # Optional email provider (choose ONE or disable)
 SMTP_USER=you@gmail.com
