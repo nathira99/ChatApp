@@ -16,14 +16,14 @@ const initSocket = (server) => {
     console.log("⚡ User connected:", socket.id);
 
     // 🟢 REGISTER USER FOR TARGETED EVENTS (VERY IMPORTANT)
-  socket.on("register", (userId) => {
-    if (!userId) return;
-    socket.join(userId); // now you can send events to that specific user
-    onlineUsers.set(userId, socket.id);
+    socket.on("register", (userId) => {
+      if (!userId) return;
+      socket.join(userId); // now you can send events to that specific user
+      onlineUsers.set(userId, socket.id);
 
-    console.log("🟢 Registered user:", userId);
-    io.emit("users:online", Array.from(onlineUsers.keys()));
-  });
+      console.log("🟢 Registered user:", userId);
+      io.emit("users:online", Array.from(onlineUsers.keys()));
+    });
 
     // 🟢 User comes online
     socket.on("user:online", (userId) => {
@@ -35,19 +35,26 @@ const initSocket = (server) => {
 
     // 💬 Direct Message
     socket.on("message:send", (data) => {
-      console.log("📨 Direct message:", data);
-      const receiverSocketId = onlineUsers.get(data.receiver);
+      const { receiverId, senderId } = data;
+
+      const receiverSocketId = onlineUsers.get(receiverId);
+      const senderSocketId = onlineUsers.get(senderId);
+
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("message:receive", data);
+        io.to(receiverSocketId).emit("users:refresh");
       }
-      // echo back to sender
-      socket.emit("message:receive", data);
+
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("message:receive", data);
+        io.to(senderSocketId).emit("users:refresh");
+      }
     });
 
     socket.on("join", (userId) => {
       socket.join(userId);
       console.log(`👥 Joined chat: ${userId}`);
-    })
+    });
 
     // 👥 Group join & leave
     socket.on("join:group", (groupId) => {
@@ -61,15 +68,15 @@ const initSocket = (server) => {
     });
 
     // 💭 Group messages
-    socket.on("group:message:send", (data) => {
-      io.to(data.group).emit("group:message:receive", data);
-      console.log("💬 Group message sent:", data.group);
-    });
+    // socket.on("group:message:send", (data) => {
+    //   io.to(data.group).emit("group:message:receive", data);
+    //   console.log("💬 Group message sent:", data.group);
+    // });
 
     // 🧩 Profile update broadcast (when user updates profile)
     socket.on("user:profile:update", (updatedUser) => {
       io.emit("user:profile:update", updatedUser);
-      
+
       console.log(`🧩 User profile updated: ${updatedUser.name}`);
     });
 

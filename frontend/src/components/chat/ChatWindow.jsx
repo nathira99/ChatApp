@@ -2,9 +2,23 @@ import React, { useEffect, useState, useRef } from "react";
 import { useSocket } from "../../context/SocketContext";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../services/api";
-import { getMessages, sendMessage, clearChat } from "../../services/messageService";
-import { getGroupMessages, sendGroupMessage } from "../../services/groupService";
-import { ArrowLeft, Search, MoreVertical, AlertTriangle, Ban, Trash2 } from "lucide-react";
+import {
+  getMessages,
+  sendMessage,
+  clearChat,
+} from "../../services/messageService";
+import {
+  getGroupMessages,
+  sendGroupMessage,
+} from "../../services/groupService";
+import {
+  ArrowLeft,
+  Search,
+  MoreVertical,
+  AlertTriangle,
+  Ban,
+  Trash2,
+} from "lucide-react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +37,7 @@ export default function ChatWindow({ chat, onClose }) {
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
+  // -------- Close menu when click outside ----------
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (menuOpen && menuRef.current && !menuRef.current.contains(e.target)) {
@@ -33,6 +48,7 @@ export default function ChatWindow({ chat, onClose }) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [menuOpen]);
 
+  // -------- LOAD MESSAGES ----------
   useEffect(() => {
     if (!chat || !user) return;
 
@@ -44,6 +60,7 @@ export default function ChatWindow({ chat, onClose }) {
           ? await getGroupMessages(chat._id)
           : await getMessages(chat._id);
 
+        // join socket rooms
         chat.isGroup
           ? socket.emit("join:group", chat._id)
           : socket.emit("join", user._id);
@@ -69,18 +86,23 @@ export default function ChatWindow({ chat, onClose }) {
     loadMessages();
   }, [chat, user, socket]);
 
+  // -------- SOCKET REALTIME LISTENERS (no duplicates) ----------
   useEffect(() => {
     if (!socket) return;
 
-    const handleDirect = (msg) => setMessages((prev) => [...prev, msg]);
+    const handleDirect = (msg) => {
+      if (!chat.isGroup) {
+        if (msg.senderId === chat._id || msg.receiverId === chat._id) {
+          setMessages((prev) => [...prev, msg]);
+        }
+      }
+    };
+
     const handleGroup = (msg) => {
       if (chat.isGroup && msg.group === chat._id) {
         setMessages((prev) => [...prev, msg]);
       }
     };
-
-    socket.off("message:receive");
-    socket.off("group:message:receive");
 
     socket.on("message:receive", handleDirect);
     socket.on("group:message:receive", handleGroup);
@@ -89,29 +111,42 @@ export default function ChatWindow({ chat, onClose }) {
       socket.off("message:receive", handleDirect);
       socket.off("group:message:receive", handleGroup);
     };
-  }, [socket, chat._id]);
+  }, [socket, chat._id, chat.isGroup]);
 
+  // -------- SEARCH FILTER ----------
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredMessages(messages);
     } else {
       const q = searchTerm.toLowerCase();
-      setFilteredMessages(messages.filter((m) => (m.content || "").toLowerCase().includes(q)));
+      setFilteredMessages(
+        messages.filter((m) => (m.content || "").toLowerCase().includes(q))
+      );
     }
   }, [searchTerm, messages]);
 
+  // -------- SEND TEXT ----------
   const handleSend = async (content) => {
     if (!content.trim()) return;
 
     try {
-      chat.isGroup
+      const newMsg = chat.isGroup
         ? await sendGroupMessage(chat._id, content)
         : await sendMessage(chat._id, content);
+
+      if (!chat.isGroup) {
+        socket.emit("message:send", {
+          ...newMsg,
+          senderId: user._id,
+          receiverId: chat._id,
+        });
+      }
     } catch (err) {
       console.error("Send failed:", err);
     }
   };
 
+  // -------- SEND FILE ----------
   const handleFileSend = async (file) => {
     if (!file) return;
 
@@ -130,7 +165,11 @@ export default function ChatWindow({ chat, onClose }) {
         });
 
         newMsg = res.data;
-        socket.emit("group:message:send", { ...newMsg, group: chat._id });
+
+        socket.emit("group:message:send", {
+          ...newMsg,
+          group: chat._id,
+        });
       } else {
         const formData = new FormData();
         formData.append("file", file);
@@ -144,12 +183,19 @@ export default function ChatWindow({ chat, onClose }) {
         });
 
         newMsg = res.data;
+
+        socket.emit("message:send", {
+          ...newMsg,
+          senderId: user._id,
+          receiverId: chat._id,
+        });
       }
     } catch (err) {
       console.error("File upload failed:", err);
     }
   };
 
+  // -------- CLEAR CHAT ----------
   const handleClearChat = async () => {
     try {
       await clearChat(chat._id);
@@ -164,10 +210,15 @@ export default function ChatWindow({ chat, onClose }) {
   };
 
   if (loading)
-    return <div className="flex-1 flex items-center justify-center text-gray-400">Loading chat...</div>;
+    return (
+      <div className="flex-1 flex items-center justify-center text-gray-400">
+        Loading chat...
+      </div>
+    );
 
   return (
     <div className="flex flex-col h-dvh bg-gray-50 dark:bg-gray-900 dark:text-gray-200">
+      {/* HEADER */}
       <div className="bg-white dark:bg-gray-800 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b dark:border-gray-700 flex items-center justify-between sm:pt-16 sm:mt-2">
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="block sm:hidden p-2 dark:text-gray-200">
@@ -177,7 +228,11 @@ export default function ChatWindow({ chat, onClose }) {
           <div
             className="cursor-pointer inline-flex items-center gap-2"
             onClick={() =>
-              navigate(chat.isGroup ? `/groups/${chat._id}/info` : `/users/${chat._id}/info`)
+              navigate(
+                chat.isGroup
+                  ? `/groups/${chat._id}/info`
+                  : `/users/${chat._id}/info`
+              )
             }
           >
             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white">
@@ -188,7 +243,9 @@ export default function ChatWindow({ chat, onClose }) {
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 {chat?.name}
                 {chat.isGroup && chat.admins?.includes(user._id) && (
-                  <span className="text-[10px] bg-blue-600 text-white px-1 rounded">Admin</span>
+                  <span className="text-[10px] bg-blue-600 text-white px-1 rounded">
+                    Admin
+                  </span>
                 )}
               </h2>
               <div className="text-xs text-gray-500">
@@ -198,6 +255,7 @@ export default function ChatWindow({ chat, onClose }) {
           </div>
         </div>
 
+        {/* MENU */}
         <div className="relative" ref={menuRef}>
           <button onClick={() => setMenuOpen((p) => !p)} className="p-2 rounded-full">
             <MoreVertical className="w-5 h-5 text-gray-600 dark:text-gray-200" />
@@ -217,27 +275,6 @@ export default function ChatWindow({ chat, onClose }) {
                 className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
               >
                 <Trash2 size={14} /> Clear Chat
-              </button>
-
-              <button
-                onClick={async () => {
-                  const reason = prompt("Why are you reporting this?");
-                  if (!reason?.trim()) return;
-
-                  try {
-                    if (chat.isGroup)
-                      await api.post("/reports", { reason, groupId: chat._id });
-                    else
-                      await api.post("/reports", { reason, userId: chat._id });
-
-                    alert("Report submitted successfully");
-                  } catch {
-                    alert("Failed to submit report");
-                  }
-                }}
-                className="w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
-              >
-                <AlertTriangle size={14} /> Report
               </button>
 
               {!chat.isGroup && (
@@ -261,6 +298,7 @@ export default function ChatWindow({ chat, onClose }) {
         </div>
       )}
 
+      {/* MESSAGE AREA */}
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="flex-1 overflow-y-auto">
           <MessageList messages={filteredMessages} currentUserId={user?._id} />
