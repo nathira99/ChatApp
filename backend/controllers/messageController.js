@@ -143,8 +143,14 @@ exports.sendFileMessage = async (req, res) => {
     const populated = await message.populate("sender receiver", "name email");
 
     if (req.io) {
-      req.io.to(receiverId.toString()).emit("message:receive", populated);
-      req.io.to(senderId.toString()).emit("message:sent", populated);
+      req.io.to(receiverId.toString()).emit("message:receive", {
+        ...populated.toObject(),
+        conversationId: conversation._id,
+      });
+      req.io.to(senderId.toString()).emit("message:sent", {
+        ...populated.toObject(),
+        conversationId: conversation._id,
+      });
     }
 
     res.status(201).json({
