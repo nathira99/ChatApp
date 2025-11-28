@@ -64,7 +64,7 @@ exports.sendMessage = async (req, res) => {
         ...populated.toObject(),
         conversationId: conversation._id,
       });
-      req.io.to(senderId.toString()).emit("message:receive", {
+      req.io.to(senderId.toString()).emit("message:sent", {
         ...populated.toObject(),
         conversationId: conversation._id,
       });
@@ -123,17 +123,35 @@ exports.sendFileMessage = async (req, res) => {
       type,
     });
 
+    let conversation = await Conversation.findOne({
+      isGroup: false,
+      members: { $all: [senderId, receiverId] },
+    });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        isGroup: false,
+        members: [senderId, receiverId],
+      });
+    }
+
+    conversation.lastMessage = `${type}: ${file.originalname}`;
+    conversation.lastMessageTime = new Date();
+    conversation.lastMessageSender = String(senderId);
+    await conversation.save();
+
     const populated = await message.populate("sender receiver", "name email");
 
     if (req.io) {
       req.io.to(receiverId.toString()).emit("message:receive", populated);
-      req.io.to(senderId.toString()).emit("message:receive", populated);
+      req.io.to(senderId.toString()).emit("message:sent", populated);
     }
 
     res.status(201).json({
       ...populated.toObject(),
       conversationId: conversation._id,
     });
+
   } catch (error) {
     console.error("❌ File message error:", error);
     res.status(500).json({ message: "Server error sending file" });
@@ -208,5 +226,20 @@ exports.clearChat = async (req, res) => {
   } catch (err) {
     console.error("❌ Clear Chat Error:", err);
     res.status(500).json({ message: "Failed to clear chat" });
+  }
+};
+exports.markAsRead = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { chatId } = req.params;
+
+    await Message.updateMany(
+      { chatId, receiverId: userId, read: false },
+      { $set: { read: true } }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to mark messages as read" });
   }
 };
