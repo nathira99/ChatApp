@@ -80,62 +80,41 @@ export default function Sidebar({ onSelectChat }) {
   /* ----------------------------------------------
       Load Conversations & Groups
   ---------------------------------------------- */
-  const loadConversations = async () => {
-    try {
-      const raw = await getConversations();
-      const me = user?._id;
+const loadConversations = async () => {
+  try {
+    const raw = await getConversations();
+    const me = user?._id;
 
-      const normalized = (raw || [])
-        .map((c) => {
-          if (!c) return null;
+    const normalized = (raw || []).map((c) => {
+      const other = c.otherUser; // backend gives this always
 
-          if (Array.isArray(c.members)) {
-            const other = c.members.find(
-              (m) => m && String(m._id) !== String(me)
-            );
+      return {
+        _id: c._id,
+        conversationId: c._id,
+        isGroup: false,
 
-            if (!other && !c.isGroup) return null;
+        // ⭐ IMPORTANT — this is the user you must message
+        userId: other?._id || null,
 
-            return {
-              _id: c._id,
-              isGroup: c.isGroup || false,
-              otherUser: other || null,
-              name: c.isGroup ? c.name : other?.name || "Unknown",
-              lastMessage: c.lastMessage || "",
-              lastMessageTime: c.lastMessageTime || c.updatedAt || "",
-            };
-          }
+        // ⭐ FIX: No more UNKNOWN
+        name: other?.name || "Unknown",
 
-          if (c.otherUser) {
-            return {
-              _id: c._id || c.otherUser._id,
-              isGroup: false,
-              otherUser: c.otherUser,
-              name: c.otherUser.name || "Unknown",
-              lastMessage: c.lastMessage || "",
-              lastMessageTime: c.lastMessageTime || "",
-            };
-          }
+        lastMessage: c.lastMessage || "",
+        lastMessageTime: c.lastMessageTime || "",
 
-          if (c.isGroup) {
-            return {
-              _id: c._id,
-              isGroup: true,
-              name: c.name || "Group Chat",
-              lastMessage: c.lastMessage || "",
-              lastMessageTime: c.lastMessageTime || "",
-            };
-          }
+        // ⭐ BACKEND unread Map
+        unreadCount: c.unread?.[me] || 0,
 
-          return null;
-        })
-        .filter(Boolean);
+        otherUser: other
+      };
+    });
 
-      setConversations(normalized);
-    } catch {
-      setConversations([]);
-    }
-  };
+    setConversations(normalized);
+  } catch (err) {
+    console.error("Load conversations failed:", err);
+    setConversations([]);
+  }
+};
 
   const loadGroups = async () => {
     try {
@@ -183,8 +162,8 @@ export default function Sidebar({ onSelectChat }) {
       loadGroups();
     };
 
-    // socket.on("message:receive", refresh);
-    // socket.on("group:message:receive", refresh);
+    socket.on("message:receive", refresh);
+    socket.on("group:message:receive", refresh);
     socket.on("users:online", refresh);
     socket.on("users:refresh", refresh);
     socket.on("groups:refresh", refresh);

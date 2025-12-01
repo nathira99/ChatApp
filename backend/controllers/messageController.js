@@ -63,7 +63,7 @@ exports.sendMessage = async (req, res) => {
     await conversation.save();
 
     const populated = await message.populate("sender receiver", "name email");
-
+    
     // Emit real-time updates
     if (req.io) {
       req.io.to(receiverId.toString()).emit("message:receive", {

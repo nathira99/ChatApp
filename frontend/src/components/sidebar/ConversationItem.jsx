@@ -27,7 +27,7 @@ function formatMessageTime(timestamp) {
 }
 
 export default function ConversationItem({ convo, active, onClick, unreadCount = 0 }) {
-    console.log("Conversation:", convo._id, "Unread:", unreadCount); 
+    // console.log("Conversation:", convo._id, "Unread:", unreadCount); 
 
   const me = JSON.parse(localStorage.getItem("user"))?._id;
   const isAdmin = convo.isGroup && convo.admins.includes(me);

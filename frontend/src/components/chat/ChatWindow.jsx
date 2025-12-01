@@ -37,6 +37,7 @@ export default function ChatWindow({ chat, onClose }) {
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
+  console.log("ACTIVE CHAT:", chat);
   // -------- Close menu when click outside ----------
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -58,7 +59,7 @@ export default function ChatWindow({ chat, onClose }) {
       try {
         let data = chat.isGroup
           ? await getGroupMessages(chat._id)
-          : await getMessages(chat._id);
+          : await getMessages(chat.userId);
 
         // join socket rooms
         chat.isGroup
@@ -86,32 +87,25 @@ export default function ChatWindow({ chat, onClose }) {
     loadMessages();
   }, [chat, user, socket]);
 
-  // -------- SOCKET REALTIME LISTENERS (no duplicates) ----------
-  useEffect(() => {
-    if (!socket) return;
+// -------- SOCKET REALTIME LISTENERS ----------
+useEffect(() => {
+  if (!socket) return;
 
-    const handleDirect = (msg) => {
-      if (!chat.isGroup) {
-        if (msg.senderId === chat._id || msg.receiverId === chat._id) {
-          setMessages((prev) => [...prev, msg]);
-        }
-      }
-    };
+  const onReceive = (msg) => {
+    if (!msg.conversationId) return;
 
-    const handleGroup = (msg) => {
-      if (chat.isGroup && msg.group === chat._id) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    };
+    if (msg.conversationId === chat.conversationId) {
+      setMessages((prev) => [...prev, msg]);
+    }
+  };
 
-    socket.on("message:receive", handleDirect);
-    socket.on("group:message:receive", handleGroup);
+  socket.on("message:receive", onReceive);
 
-    return () => {
-      socket.off("message:receive", handleDirect);
-      socket.off("group:message:receive", handleGroup);
-    };
-  }, [socket, chat._id, chat.isGroup]);
+  return () => {
+    socket.off("message:receive", onReceive);
+  };
+}, [socket, chat.conversationId]);
+
 
   // -------- SEARCH FILTER ----------
   useEffect(() => {
@@ -132,14 +126,12 @@ export default function ChatWindow({ chat, onClose }) {
     try {
       const newMsg = chat.isGroup
         ? await sendGroupMessage(chat._id, content)
-        : await sendMessage(chat._id, content);
+        : await sendMessage(chat.userId, content);
+
+      setMessages((prev) => [...prev, newMsg]);
 
       if (!chat.isGroup) {
-        socket.emit("message:send", {
-          ...newMsg,
-          senderId: user._id,
-          receiverId: chat._id,
-        });
+        socket.emit("message:send", newMsg);
       }
     } catch (err) {
       console.error("Send failed:", err);
@@ -166,14 +158,13 @@ export default function ChatWindow({ chat, onClose }) {
 
         newMsg = res.data;
 
-        socket.emit("group:message:send", {
-          ...newMsg,
-          group: chat._id,
-        });
+        setMessages((prev) => [...prev, newMsg]);
+
+        socket.emit("group:message:send", newMsg);
       } else {
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("receiverId", chat._id);
+        formData.append("receiverId", chat.userId);
 
         const res = await api.post("/messages/upload", formData, {
           headers: {
@@ -184,11 +175,9 @@ export default function ChatWindow({ chat, onClose }) {
 
         newMsg = res.data;
 
-        socket.emit("message:send", {
-          ...newMsg,
-          senderId: user._id,
-          receiverId: chat._id,
-        });
+        setMessages((prev) => [...prev, newMsg]);
+
+        socket.emit("message:send", newMsg,);
       }
     } catch (err) {
       console.error("File upload failed:", err);

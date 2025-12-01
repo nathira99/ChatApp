@@ -17,45 +17,38 @@ export default function HomePage() {
   }, []);
 
   // ------------------------ SELECT CHAT ------------------------
-  const handleSelectChat = (chat) => {
-    if (!chat) return;
+const handleSelectChat = (chat) => {
+  if (!chat) return;
 
-    // DIRECT CHAT with otherUser object
-    if (!chat.isGroup && chat.otherUser) {
-      setActiveChat({
-        _id: chat.otherUser._id,
-        name: chat.otherUser.name,
-        email: chat.otherUser.email,
-        isGroup: false,
-      });
-      setShowSidebar(false);
-      return;
-    }
-
-    // DIRECT CHAT simple
-    if (!chat.isGroup) {
-      setActiveChat({
-        _id: chat._id,
-        name: chat.name,
-        email: chat.email,
-        isGroup: false,
-      });
-      setShowSidebar(false);
-      return;
-    }
-
-    // GROUP CHAT
+  if (!chat.isGroup) {
+    // PERSONAL CHAT
     setActiveChat({
-      _id: chat._id,
-      name: chat.name,
-      description: chat.description,
-      members: chat.members || [],
-      admins: chat.admins || [],
-      isGroup: true,
+      conversationId: chat._id,       
+      userId: chat.otherUser._id,     
+      _id: chat.otherUser._id,                  
+      name: chat.otherUser.name,
+      email: chat.otherUser.email,
+      isGroup: false,
     });
 
     setShowSidebar(false);
-  };
+    return;
+  }
+
+  // GROUP CHAT
+  setActiveChat({
+    conversationId: chat._id,
+    _id: chat._id,
+    name: chat.name,
+    description: chat.description,
+    members: chat.members || [],
+    admins: chat.admins || [],
+    isGroup: true,
+  });
+
+  setShowSidebar(false);
+};
+
 
   // ------------------------ CLOSE CHAT ------------------------
   const handleCloseChat = () => {
