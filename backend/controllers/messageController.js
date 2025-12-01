@@ -54,6 +54,12 @@ exports.sendMessage = async (req, res) => {
     conversation.lastMessage = content;
     conversation.lastMessageTime = new Date();
     conversation.lastMessageSender = String(senderId);
+    conversation.unread.set(
+      receiverId,
+      (conversation.unread.get(receiverId) || 0) + 1
+    );
+    conversation.unread.set(senderId, 0);
+
     await conversation.save();
 
     const populated = await message.populate("sender receiver", "name email");
@@ -138,6 +144,11 @@ exports.sendFileMessage = async (req, res) => {
     conversation.lastMessage = `${type}: ${file.originalname}`;
     conversation.lastMessageTime = new Date();
     conversation.lastMessageSender = String(senderId);
+    conversation.unread.set(
+      receiverId,
+      (conversation.unread.get(receiverId) || 0) + 1
+    );
+    conversation.unread.set(senderId, 0);
     await conversation.save();
 
     const populated = await message.populate("sender receiver", "name email");
@@ -157,7 +168,6 @@ exports.sendFileMessage = async (req, res) => {
       ...populated.toObject(),
       conversationId: conversation._id,
     });
-
   } catch (error) {
     console.error("❌ File message error:", error);
     res.status(500).json({ message: "Server error sending file" });
@@ -234,18 +244,41 @@ exports.clearChat = async (req, res) => {
     res.status(500).json({ message: "Failed to clear chat" });
   }
 };
+
+// ==============================
+// MARK AS READ
+// ==============================
 exports.markAsRead = async (req, res) => {
   try {
     const userId = req.user._id;
     const { chatId } = req.params;
 
+    // Find the conversation
+    const conversation = await Conversation.findById(chatId);
+    if (!conversation) return res.status(404).json({ error: "Conversation not found" });
+
+    // Find the other user
+    const otherUserId = conversation.members.find(
+      (m) => m.toString() !== userId.toString()
+    );
+
+    // Mark messages as read
     await Message.updateMany(
-      { chatId, receiverId: userId, read: false },
+      {
+        sender: otherUserId,
+        receiver: userId,
+        read: false,
+      },
       { $set: { read: true } }
     );
 
+    // Reset unread count for this user
+    conversation.unread.set(userId.toString(), 0);
+    await conversation.save();
+
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Failed to mark messages as read" });
+    console.error("❌ markAsRead error:", err);
+    res.status(500).json({ error: "Failed to mark as read" });
   }
 };

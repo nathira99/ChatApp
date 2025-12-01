@@ -1,3 +1,4 @@
+const { decapsulate } = require("crypto");
 const mongoose = require("mongoose");
 
 const ConversationSchema = new mongoose.Schema(
@@ -10,6 +11,11 @@ const ConversationSchema = new mongoose.Schema(
     lastMessage: { type: String, default: "" },
     lastMessageTime: { type: Date },
     lastMessageSender: { type: String, default: "" },
+    unread:{
+      type: Map,
+      of: Number,
+      default: {},
+    },
   },
   { timestamps: true }
 );

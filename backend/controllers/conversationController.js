@@ -51,6 +51,7 @@ exports.getConversations = async (req, res) => {
           lastMessage: c.lastMessage || "",
           lastMessageSender: c.lastMessageSender || "",
           lastMessageTime: c.lastMessageTime || null,
+          unread: c.unread,
         };
       });
 
