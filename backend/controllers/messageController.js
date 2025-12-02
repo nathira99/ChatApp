@@ -76,6 +76,9 @@ exports.sendMessage = async (req, res) => {
       });
     }
 
+    req.io.to(senderId.toString()).emit("users:refresh");
+    req.io.to(receiverId.toString()).emit("users:refresh");
+
     res.status(201).json({
       ...populated.toObject(),
       conversationId: conversation._id,
@@ -163,6 +166,9 @@ exports.sendFileMessage = async (req, res) => {
         conversationId: conversation._id,
       });
     }
+
+    req.io.to(senderId.toString()).emit("users:refresh");
+    req.io.to(receiverId.toString()).emit("users:refresh");
 
     res.status(201).json({
       ...populated.toObject(),

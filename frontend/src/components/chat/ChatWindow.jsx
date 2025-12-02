@@ -22,6 +22,7 @@ import {
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import { useNavigate } from "react-router-dom";
+import { triggerRefresh } from "../../utils/triggerRefresh";
 
 export default function ChatWindow({ chat, onClose }) {
   const { socket } = useSocket();
@@ -66,7 +67,9 @@ export default function ChatWindow({ chat, onClose }) {
           ? socket.emit("join:group", chat._id)
           : socket.emit("join", user._id);
 
-        const cleared = JSON.parse(localStorage.getItem("clearedChats") || "{}");
+        const cleared = JSON.parse(
+          localStorage.getItem("clearedChats") || "{}"
+        );
         const clearTime = cleared[chat._id];
 
         const raw = Array.isArray(data) ? data : data.messages || data;
@@ -87,25 +90,26 @@ export default function ChatWindow({ chat, onClose }) {
     loadMessages();
   }, [chat, user, socket]);
 
-// -------- SOCKET REALTIME LISTENERS ----------
-useEffect(() => {
-  if (!socket) return;
+  // -------- SOCKET REALTIME LISTENERS ----------
+  useEffect(() => {
+    if (!socket) return;
 
-  const onReceive = (msg) => {
-    if (!msg.conversationId) return;
+    const onReceive = (msg) => {
+      if (!msg.conversationId) return;
 
-    if (msg.conversationId === chat.conversationId) {
-      setMessages((prev) => [...prev, msg]);
-    }
-  };
+      const activeConversationId = chat.conversationId || chat._id;
 
-  socket.on("message:receive", onReceive);
+      if (msg.conversationId === activeConversationId) {
+        setMessages((prev) => [...prev, msg]);
+      }
+    };
 
-  return () => {
-    socket.off("message:receive", onReceive);
-  };
-}, [socket, chat.conversationId]);
+    socket.on("message:receive", onReceive);
 
+    return () => {
+      socket.off("message:receive", onReceive);
+    };
+  }, [socket, chat.conversationId]);
 
   // -------- SEARCH FILTER ----------
   useEffect(() => {
@@ -130,9 +134,7 @@ useEffect(() => {
 
       setMessages((prev) => [...prev, newMsg]);
 
-      if (!chat.isGroup) {
-        socket.emit("message:send", newMsg);
-      }
+      triggerRefresh();
     } catch (err) {
       console.error("Send failed:", err);
     }
@@ -160,7 +162,7 @@ useEffect(() => {
 
         setMessages((prev) => [...prev, newMsg]);
 
-        socket.emit("group:message:send", newMsg);
+        triggerRefresh();
       } else {
         const formData = new FormData();
         formData.append("file", file);
@@ -177,7 +179,7 @@ useEffect(() => {
 
         setMessages((prev) => [...prev, newMsg]);
 
-        socket.emit("message:send", newMsg,);
+        triggerRefresh();
       }
     } catch (err) {
       console.error("File upload failed:", err);
@@ -210,7 +212,10 @@ useEffect(() => {
       {/* HEADER */}
       <div className="bg-white dark:bg-gray-800 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b dark:border-gray-700 flex items-center justify-between sm:pt-16 sm:mt-2">
         <div className="flex items-center gap-3">
-          <button onClick={onClose} className="block sm:hidden p-2 dark:text-gray-200">
+          <button
+            onClick={onClose}
+            className="block sm:hidden p-2 dark:text-gray-200"
+          >
             <ArrowLeft className="w-6 h-6" />
           </button>
 
@@ -246,7 +251,10 @@ useEffect(() => {
 
         {/* MENU */}
         <div className="relative" ref={menuRef}>
-          <button onClick={() => setMenuOpen((p) => !p)} className="p-2 rounded-full">
+          <button
+            onClick={() => setMenuOpen((p) => !p)}
+            className="p-2 rounded-full"
+          >
             <MoreVertical className="w-5 h-5 text-gray-600 dark:text-gray-200" />
           </button>
 
