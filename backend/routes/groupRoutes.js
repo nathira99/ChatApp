@@ -42,4 +42,6 @@ router.post(
   groupController.uploadGroupFile
 );
 
+router.put("/groups/:groupId/unread/reset",protect, groupController.resetGroupUnread);
+
 module.exports = router;

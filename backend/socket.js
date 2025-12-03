@@ -51,6 +51,8 @@ const initSocket = (server) => {
       }
     });
 
+    // 👥 Chat join & leave
+
     socket.on("join", (userId) => {
       socket.join(userId);
       console.log(`👥 Joined chat: ${userId}`);
@@ -67,11 +69,6 @@ const initSocket = (server) => {
       console.log(`🚪 Left group: ${groupId}`);
     });
 
-    // 💭 Group messages
-    // socket.on("group:message:send", (data) => {
-    //   io.to(data.group).emit("group:message:receive", data);
-    //   console.log("💬 Group message sent:", data.group);
-    // });
 
     // 🧩 Profile update broadcast (when user updates profile)
     socket.on("user:profile:update", (updatedUser) => {

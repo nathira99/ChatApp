@@ -1,5 +1,3 @@
-
-
 const mongoose = require("mongoose");
 
 const AuditSchema = new mongoose.Schema({
@@ -33,6 +31,11 @@ const GroupSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
+    unread: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
     audit: [AuditSchema],
   },
   { timestamps: true }

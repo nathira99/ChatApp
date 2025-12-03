@@ -79,6 +79,7 @@ const handleSelectChat = (chat) => {
         >
           <Sidebar
             onSelectChat={handleSelectChat}
+            openChatId={activeChat?.conversationId || null}
             conversations={conversations}
             setConversations={setConversations}
             onClose={() => setShowSidebar(false)}

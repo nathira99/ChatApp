@@ -19,7 +19,7 @@ async function pushAudit(groupId, action, by, meta = {}) {
 
 /**
  * GET /api/groups/my
-*/
+ */
 exports.getMyGroups = async (req, res) => {
   try {
     const userId = req.user && req.user._id;
@@ -30,26 +30,30 @@ exports.getMyGroups = async (req, res) => {
       .populate("members", "name email")
       .lean();
 
-   const result = await Promise.all(groups.map(async (g) => {
-      // find the latest message for this group
-      const lastMsg = await Message.findOne({ group: g._id })
-        .sort({ createdAt: -1 })
-        .populate("sender", "name")
-        .lean();
+    const result = await Promise.all(
+      groups.map(async (g) => {
+        // find the latest message for this group
+        const lastMsg = await Message.findOne({ group: g._id })
+          .sort({ createdAt: -1 })
+          .populate("sender", "name")
+          .lean();
 
-      return {
-        _id: g._id,
-        name: g.name || "Group",
-        isGroup: true,
-        lastMessage: lastMsg ? (lastMsg.content || lastMsg.fileName || "") : "",
-        lastMessageSender: lastMsg && lastMsg.sender ? String(lastMsg.sender._id) : "",
-        lastMessageSenderName: lastMsg && lastMsg.sender ? lastMsg.sender.name : "",
-        lastMessageTime: lastMsg ? lastMsg.createdAt : (g.updatedAt || null),
-        imageUrl: g.imageUrl || "",
-        members: g.members || [],
-        admins: g.admins || [],
-      };
-    }));
+        return {
+          _id: g._id,
+          name: g.name || "Group",
+          isGroup: true,
+          lastMessage: lastMsg ? lastMsg.content || lastMsg.fileName || "" : "",
+          lastMessageSender:
+            lastMsg && lastMsg.sender ? String(lastMsg.sender._id) : "",
+          lastMessageSenderName:
+            lastMsg && lastMsg.sender ? lastMsg.sender.name : "",
+          lastMessageTime: lastMsg ? lastMsg.createdAt : g.updatedAt || null,
+          imageUrl: g.imageUrl || "",
+          members: g.members || [],
+          admins: g.admins || [],
+        };
+      })
+    );
 
     return res.json(result);
   } catch (err) {
@@ -62,8 +66,14 @@ exports.getMyGroups = async (req, res) => {
 // ✅ Create a new group
 exports.createGroup = async (req, res) => {
   try {
-    const { name, description = "", members = [], isPrivate = false } = req.body;
-    if (!name.trim()) return res.status(400).json({ message: "Group name is required" });
+    const {
+      name,
+      description = "",
+      members = [],
+      isPrivate = false,
+    } = req.body;
+    if (!name.trim())
+      return res.status(400).json({ message: "Group name is required" });
 
     const creatorId = req.user._id.toString();
     const uniqueMembers = Array.from(new Set([...members, creatorId]));
@@ -141,7 +151,10 @@ exports.updateGroup = async (req, res) => {
     if (description) group.description = description;
     if (imageUrl) group.imageUrl = imageUrl;
     await group.save();
-    await pushAudit(group._id, "update_group", req.user._id, { name, description });
+    await pushAudit(group._id, "update_group", req.user._id, {
+      name,
+      description,
+    });
 
     res.json(group);
   } catch (err) {
@@ -205,14 +218,19 @@ exports.removeMember = async (req, res) => {
     if (!includesId(group.admins, req.user._id))
       return res.status(403).json({ message: "Admins only" });
 
-    group.members = group.members.filter((m) => m.toString() !== userId.toString());
-    group.admins = group.admins.filter((a) => a.toString() !== userId.toString());
+    group.members = group.members.filter(
+      (m) => m.toString() !== userId.toString()
+    );
+    group.admins = group.admins.filter(
+      (a) => a.toString() !== userId.toString()
+    );
 
     // If removing creator, transfer if needed
     if (group.creator.toString() === userId.toString()) {
       if (group.members.length > 0) {
         group.creator = group.members[0];
-        if (!includesId(group.admins, group.creator)) group.admins.push(group.creator);
+        if (!includesId(group.admins, group.creator))
+          group.admins.push(group.creator);
       } else {
         // no members left — soft-delete group
         group.deleted = true;
@@ -222,7 +240,10 @@ exports.removeMember = async (req, res) => {
     await group.save();
     await pushAudit(group._id, "remove_member", req.user._id, { userId });
 
-    const populated = await Group.findById(groupId).populate("members admins creator", "name email");
+    const populated = await Group.findById(groupId).populate(
+      "members admins creator",
+      "name email"
+    );
     res.json({ message: "Member removed", group: populated });
   } catch (err) {
     console.error("Error removing member:", err);
@@ -275,7 +296,7 @@ exports.deleteGroup = async (req, res) => {
 };
 
 // ===============================================
-// Send Group Message
+// Send Group Message (FINAL WORKING VERSION)
 // ===============================================
 exports.sendGroupMessage = async (req, res) => {
   try {
@@ -293,18 +314,18 @@ exports.sendGroupMessage = async (req, res) => {
 
     if (!group) return res.status(404).json({ message: "Group not found" });
 
-    // membership check for populated docs + ObjectId arrays
-    const memberIds = group.members.map(m =>
+    // Membership check
+    const memberIds = group.members.map((m) =>
       m._id ? m._id.toString() : m.toString()
     );
 
     if (!memberIds.includes(senderId)) {
-      console.log("403 → user is NOT in this group");
-      console.log("senderId:", senderId);
-      console.log("members:", memberIds);
-      return res.status(403).json({ message: "You are not a member of this group" });
+      return res
+        .status(403)
+        .json({ message: "You are not a member of this group" });
     }
 
+    // Create message
     const message = await Message.create({
       sender: senderId,
       group: groupId,
@@ -314,21 +335,38 @@ exports.sendGroupMessage = async (req, res) => {
 
     const sender = await User.findById(senderId).select("name");
 
-    await Group.findByIdAndUpdate(groupId, {
-      lastMessage: content,
-      lastMessageAt: new Date(),
-      lastMessageSender: senderId,
-      lastMessageSenderName: sender.name,
+    // ===============================================
+    // ⭐ UPDATE UNREAD COUNT FOR ALL EXCEPT SENDER
+    // ===============================================
+    group.unread = group.unread || {};
+
+    memberIds.forEach((memberId) => {
+      if (memberId !== senderId) {
+        group.unread[memberId] = (group.unread[memberId] || 0) + 1;
+      }
     });
+
+    // ===============================================
+    // ⭐ UPDATE LAST MESSAGE INFO
+    // ===============================================
+    group.lastMessage = content;
+    group.lastMessageAt = new Date();
+    group.lastMessageSender = senderId;
+    group.lastMessageSenderName = sender.name;
+
+    await group.save();
 
     const populated = await message.populate("sender", "name email avatar");
 
-    // SOCKET EVENT – must match frontend listener
+    // ===============================================
+    // ⭐ SOCKET EMIT (NO CHANGE)
+    // ===============================================
     if (req.io) {
       req.io.to(groupId.toString()).emit("group:message:receive", {
         ...populated.toObject(),
         conversationId: groupId,
       });
+
       req.io.emit("groups:refresh");
     }
 
@@ -339,6 +377,100 @@ exports.sendGroupMessage = async (req, res) => {
   }
 };
 
+// ===============================================
+// Upload Group File (FINAL UPDATED VERSION)
+// ===============================================
+exports.uploadGroupFile = async (req, res) => {
+  try {
+    if (!req.file)
+      return res.status(400).json({ error: "No file uploaded" });
+
+    const { groupId } = req.params;
+    const senderId = req.user._id.toString();
+    const filePath = `/uploads/${req.file.filename}`;
+
+    // Fetch group with members
+    const group = await Group.findById(groupId).populate("members", "_id name");
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    const memberIds = group.members.map((m) =>
+      m._id ? m._id.toString() : m.toString()
+    );
+
+    // Permission check
+    if (!memberIds.includes(senderId)) {
+      return res
+        .status(403)
+        .json({ message: "You are not a member of this group" });
+    }
+
+    // Create message
+    const message = await Message.create({
+      sender: senderId,
+      group: groupId,
+      content: `${req.file.originalname}`,
+      fileUrl: filePath,
+      fileType: req.file.mimetype,
+      fileName: req.file.originalname,
+      type: "file",
+    });
+
+    const sender = await User.findById(senderId).select("name");
+
+    // ===============================================
+    // ⭐ UPDATE UNREAD COUNTS FOR EVERY MEMBER EXCEPT SENDER
+    // ===============================================
+    group.unread = group.unread || {};
+
+    memberIds.forEach((memberId) => {
+      if (memberId !== senderId) {
+        group.unread[memberId] = (group.unread[memberId] || 0) + 1;
+      }
+    });
+
+    // ===============================================
+    // ⭐ UPDATE LAST MESSAGE INFO
+    // ===============================================
+    group.lastMessage = req.file.originalname;
+    group.lastMessageAt = new Date();
+    group.lastMessageSender = senderId;
+    group.lastMessageSenderName = sender.name;
+
+    await group.save();
+
+    const populated = await message.populate("sender", "name email avatar");
+
+    // ===============================================
+    // ⭐ SOCKET EMIT
+    // ===============================================
+    req.app.get("io")?.to(groupId).emit("group:message:receive", {
+      ...populated.toObject(),
+      conversationId: groupId,
+    });
+
+    req.app.get("io")?.emit("groups:refresh");
+
+    return res.status(201).json(populated);
+  } catch (err) {
+    console.error("❌ Group file message error:", err);
+    return res.status(500).json({ error: "Server error uploading group file" });
+  }
+};
+
+exports.resetGroupUnread = async (req, res) => {
+  const groupId = req.params.groupId;
+  const userId = req.user._id.toString();
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ message: "Group not found" });
+
+  group.unread = group.unread || {};
+  group.unread[userId] = 0;
+
+  await group.save();
+
+  return res.json({ success: true });
+};
 
 // ===============================================
 // Get Group Messages
@@ -351,12 +483,14 @@ exports.getGroupMessages = async (req, res) => {
     const group = await Group.findById(groupId).populate("members", "_id");
     if (!group) return res.status(404).json({ message: "Group not found" });
 
-    const memberIds = group.members.map(m =>
+    const memberIds = group.members.map((m) =>
       m._id ? m._id.toString() : m.toString()
     );
 
     if (!memberIds.includes(userId))
-      return res.status(403).json({ message: "You are not a member of this group" });
+      return res
+        .status(403)
+        .json({ message: "You are not a member of this group" });
 
     const messages = await Message.find({ group: groupId })
       .populate("sender", "name email")
@@ -366,36 +500,5 @@ exports.getGroupMessages = async (req, res) => {
   } catch (err) {
     console.error("❌ Error fetching group messages:", err);
     res.status(500).json({ message: "Error fetching group messages" });
-  }
-};
-
-exports.uploadGroupFile = async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-    const { groupId } = req.params;
-    const filePath = `/uploads/${req.file.filename}`;
-
-    const message = await Message.create({
-      sender: req.user._id,
-      group: groupId,
-      content: `${req.file.originalname}`,
-      fileUrl: filePath,
-      fileType: req.file.mimetype,
-      fileName: req.file.originalname,
-    });
-
-    const populated = await message.populate("sender", "name email");
-
-    req.app.get("io")?.to(groupId).emit("group:message:receive", {
-      ...populated.toObject(),
-      conversationId: groupId,
-    });
-    req.app.get("io")?.emit("groups:refresh");
-
-    res.status(201).json(populated);
-  } catch (err) {
-    console.error("❌ Group file message error:", err);
-    res.status(500).json({ error: "Server error uploading group file" });
   }
 };

@@ -91,25 +91,35 @@ export default function ChatWindow({ chat, onClose }) {
   }, [chat, user, socket]);
 
   // -------- SOCKET REALTIME LISTENERS ----------
-  useEffect(() => {
-    if (!socket) return;
+useEffect(() => {
+  if (!socket || !chat) return;
 
-    const onReceive = (msg) => {
-      if (!msg.conversationId) return;
+  const activeId = chat.conversationId || chat._id;
 
-      const activeConversationId = chat.conversationId || chat._id;
+  const handler = (msg) => {
+    if (String(msg.conversationId) !== String(activeId)) return;
+    setMessages((prev) => {
+      if (prev.some((m) => String(m._id) === String(msg._id))) return prev;
+      return [...prev, msg];
+    });
+    
+    console.log("String(msg.conversationId)", String(msg.conversationId));
+    console.log("String(activeId)",String(activeId));
+  };
 
-      if (msg.conversationId === activeConversationId) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    };
+  // Always remove old listener first (prevents double emit)
+  socket.off("group:message:receive", handler);
+  socket.off("message:receive", handler);
 
-    socket.on("message:receive", onReceive);
+  socket.on("group:message:receive", handler);
+  socket.on("message:receive", handler);
 
-    return () => {
-      socket.off("message:receive", onReceive);
-    };
-  }, [socket, chat.conversationId]);
+  return () => {
+    socket.off("group:message:receive", handler);
+    socket.off("message:receive", handler);
+  };
+
+}, [socket, chat?._id]);
 
   // -------- SEARCH FILTER ----------
   useEffect(() => {
@@ -127,12 +137,13 @@ export default function ChatWindow({ chat, onClose }) {
   const handleSend = async (content) => {
     if (!content.trim()) return;
 
-    try {
-      const newMsg = chat.isGroup
-        ? await sendGroupMessage(chat._id, content)
-        : await sendMessage(chat.userId, content);
-
-      setMessages((prev) => [...prev, newMsg]);
+    try { 
+      if(chat.isGroup){
+         await sendGroupMessage(chat._id, content);
+        }
+        else {
+      const newMsg = await sendMessage(chat.userId, content);
+      setMessages((prev) => [...prev, newMsg]);}
 
       triggerRefresh();
     } catch (err) {
@@ -160,7 +171,7 @@ export default function ChatWindow({ chat, onClose }) {
 
         newMsg = res.data;
 
-        setMessages((prev) => [...prev, newMsg]);
+        // setMessages((prev) => [...prev, newMsg]);
 
         triggerRefresh();
       } else {

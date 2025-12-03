@@ -4,8 +4,10 @@ import { getConversations, getUserGroups } from "../../services/chatService";
 import ConversationItem from "./ConversationItem";
 import NewChatModal from "./NewChatModal";
 import { useSocket } from "../../context/SocketContext";
+import api from "../../services/api";
+import { triggerRefresh } from "../../utils/triggerRefresh";
 
-export default function Sidebar({ onSelectChat }) {
+export default function Sidebar({ onSelectChat, openChatId }) {
   const { user } = useAuth();
   const { socket } = useSocket();
 
@@ -14,11 +16,10 @@ export default function Sidebar({ onSelectChat }) {
   const [groups, setGroups] = useState([]);
   const [showNewChat, setShowNewChat] = useState(false);
   const [unread, setUnread] = useState({});
-  const [activeChatId, setActiveChatId] = useState(null);
 
-  /* ------------------------------------
-      NOTIFICATIONS
-  ------------------------------------- */
+  // ----------------------------------------------
+  // Notifications
+  // ----------------------------------------------
   useEffect(() => {
     if (!socket || !user) return;
 
@@ -28,10 +29,7 @@ export default function Sidebar({ onSelectChat }) {
     };
 
     const notify = (chatId, title, body) => {
-      console.log("NOTIFY → chatId:", chatId);
-      console.log("UNREAD BEFORE:", unread);
-
-      if (chatId === activeChatId) return;
+      if (String(chatId) === String(openChatId)) return;
 
       setUnread((prev) => ({
         ...prev,
@@ -43,17 +41,18 @@ export default function Sidebar({ onSelectChat }) {
       if (Notification.permission === "granted") {
         new Notification(title, {
           body,
-          icon: "/logo192.png",
+          icon: "/chat-message-heart-svgrepo-com.svg",
+          tag: chatId,
+          renotify: true,
         });
       }
     };
 
     const privateListener = (msg) => {
-      if (msg.conversationId === user._id) return;
-
+      const chatId = msg.conversationId;
       notify(
-        msg.conversationId,
-        msg.senderName || "New Message",
+        chatId,
+        msg.sender?.name || "New Message",
         msg.content || "Message received"
       );
     };
@@ -61,11 +60,27 @@ export default function Sidebar({ onSelectChat }) {
     const groupListener = (msg) => {
       if (msg.sender?._id === user._id) return;
 
+      const groupId = msg.conversationId;
+
+      if (String(openChatId) === String(groupId)) return;
+
+      // notification only
       notify(
-        msg.conversationId,
+        groupId,
+        groups.find((g) => String(g._id) === String(groupId))?.name || "Group",
         msg.sender?.name || "New Group Message",
         msg.content || "Message received"
       );
+      playSound();
+
+      // setUnread((prev) => ({
+      //   ...prev,
+      //   [groupId]: (prev[groupId] || 0) + 1,
+      // }));
+
+      // triggerRefresh();
+      // important for unread badge
+      loadGroups();
     };
 
     socket.on("message:receive", privateListener);
@@ -75,46 +90,51 @@ export default function Sidebar({ onSelectChat }) {
       socket.off("message:receive", privateListener);
       socket.off("group:message:receive", groupListener);
     };
-  }, [socket, user, activeChatId]);
+  }, [socket, user, openChatId]);
 
   /* ----------------------------------------------
       Load Conversations & Groups
   ---------------------------------------------- */
-const loadConversations = async () => {
-  try {
-    const raw = await getConversations();
-    const me = user?._id;
+  const loadConversations = async () => {
+    try {
+      const raw = await getConversations();
+      const me = user?._id;
 
-    const normalized = (raw || []).map((c) => {
-      const other = c.otherUser; // backend gives this always
+      const normalized = (raw || []).map((c) => {
+        const other = c.otherUser; // backend gives this always
+        const unread = c.unread?.[me] || 0;
 
-      return {
-        _id: c._id,
-        conversationId: c._id,
-        isGroup: false,
+        setUnread((prev) => ({
+          ...prev,
+          [c._id]: unread
+        }));
+        return {
+          _id: c._id,
+          conversationId: c._id,
+          isGroup: false,
 
-        // ⭐ IMPORTANT — this is the user you must message
-        userId: other?._id || null,
+          // ⭐ IMPORTANT — this is the user you must message
+          userId: other?._id || null,
 
-        // ⭐ FIX: No more UNKNOWN
-        name: other?.name || "Unknown",
+          // ⭐ FIX: No more UNKNOWN
+          name: other?.name || "Unknown",
 
-        lastMessage: c.lastMessage || "",
-        lastMessageTime: c.lastMessageTime || "",
+          lastMessage: c.lastMessage || "",
+          lastMessageTime: c.lastMessageTime || "",
 
-        // ⭐ BACKEND unread Map
-        unreadCount: c.unread?.[me] || 0,
+          // ⭐ BACKEND unread Map
+          unreadCount: unread,
 
-        otherUser: other
-      };
-    });
+          otherUser: other,
+        };
+      });
 
-    setConversations(normalized);
-  } catch (err) {
-    console.error("Load conversations failed:", err);
-    setConversations([]);
-  }
-};
+      setConversations(normalized);
+    } catch (err) {
+      console.error("Load conversations failed:", err);
+      setConversations([]);
+    }
+  };
 
   const loadGroups = async () => {
     try {
@@ -123,6 +143,13 @@ const loadConversations = async () => {
 
       const normalized = (raw || []).map((g) => {
         const isYou = String(g.lastMessageSender) === String(me);
+
+        const unread = g.unread ?.[me] || 0;
+
+        setUnread((prev) => ({
+          ...prev,
+          [g._id]: unread
+        }));
 
         return {
           _id: g._id,
@@ -136,6 +163,7 @@ const loadConversations = async () => {
               ? `You: ${g.lastMessage}`
               : `${g.lastMessageSenderName}: ${g.lastMessage}`
             : "No messages yet",
+          unreadCount: unread,
           admins: g.admins || [],
         };
       });
@@ -244,7 +272,6 @@ const loadConversations = async () => {
                   unreadCount={unread[c._id] || 0}
                   onClick={() => {
                     setUnread((prev) => ({ ...prev, [c._id]: 0 }));
-                    setActiveChatId(c._id);
                     onSelectChat(c);
                   }}
                 />
@@ -267,23 +294,41 @@ const loadConversations = async () => {
                 You are not in any groups.
               </p>
             ) : (
-              groups.map((g) => (
-                <div
-                  key={g._id}
-                  onClick={() =>
-                    onSelectChat({
-                      ...g,
-                      isGroup: true,
-                      members: g.members || [],
-                    })
-                  }
-                >
-                  <ConversationItem
-                    convo={g}
-                    unreadCount={unread[g._id] || 0}
-                  />{" "}
-                </div>
-              ))
+              groups.map((g) => {
+                const groupUnread = unread[g._id] ?? g.unreadCount ?? 0;
+
+                return (
+                  <div
+                    key={g._id}
+                    onClick={async () => {
+                      // 1️⃣ Reset backend unread
+                      try {
+                        await api.put(`/groups/${g._id}/unread/reset`);
+                      } catch (err) {
+                        console.error("Group unread reset failed:", err);
+                      }
+                      // setGroups((prev) =>
+                      //   prev.map((x) =>
+                      //     x._id === g._id ? { ...x, unreadCount: 0 } : x
+                      //   )
+                      // );
+
+                      setUnread((prev) => ({ ...prev, [g._id]: 0 }));
+
+                      onSelectChat({
+                        ...g,
+                        isGroup: true,
+                        members: g.members || [],
+                      });
+                    }}
+                  >
+                    <ConversationItem
+                      convo={g}
+                      unreadCount={groupUnread}
+                    />
+                  </div>
+                );
+              })
             )}
           </>
         )}

@@ -23,6 +23,7 @@ import AdminGroups from "./pages/admin/AdminGroup";
 import AdminReports from "./pages/admin/AdminReports";
 import UserInfo from "./pages/UserInfo";
 import GroupInfo from "./pages/groups/GroupInfo";
+import { useEffect } from "react";
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -30,6 +31,15 @@ const PrivateRoute = ({ children }) => {
 };
 
 export default function App() {
+ useEffect(() => {
+  const unlock = () => {
+    Notification.requestPermission();
+    document.removeEventListener("click", unlock);
+  };
+
+  document.addEventListener("click", unlock);
+}, []);
+
   return (
     <Router>
       <AuthProvider>

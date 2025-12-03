@@ -19,16 +19,29 @@ export const SocketProvider = ({ children }) => {
       withCredentials: true,
     });
 
-    newSocket.on("connect", () => {
+    newSocket.on("connect",async () => {
       console.log("✅ Socket connected:", newSocket.id);
       const user = JSON.parse(localStorage.getItem("user"));
       if (user?._id) {
         newSocket.emit("register", user._id);
       }
-
+      try{
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/groups/my`, {
+          headers:{
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        const groups = await res.json();
+        groups.forEach(g => {
+          newSocket.emit("join:group", g._id);
+        })
+      }catch(err){
+        console.error("Group auto join failed:", err);
+      }
       const token = localStorage.getItem("token");
       if (token) newSocket.emit("user:connected", token); // identify logged user to backend
     });
+
     newSocket.on("account:deactivated", (data) => {
       alert(data.message || "Your account has been deactivated.");
       localStorage.clear();
