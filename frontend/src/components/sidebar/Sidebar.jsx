@@ -106,7 +106,7 @@ export default function Sidebar({ onSelectChat, openChatId }) {
 
         setUnread((prev) => ({
           ...prev,
-          [c._id]: unread
+          [c._id]: unread,
         }));
         return {
           _id: c._id,
@@ -144,11 +144,11 @@ export default function Sidebar({ onSelectChat, openChatId }) {
       const normalized = (raw || []).map((g) => {
         const isYou = String(g.lastMessageSender) === String(me);
 
-        const unread = g.unread ?.[me] || 0;
+        const unread = g.unread?.[me] || 0;
 
         setUnread((prev) => ({
           ...prev,
-          [g._id]: unread
+          [g._id]: unread,
         }));
 
         return {
@@ -270,7 +270,12 @@ export default function Sidebar({ onSelectChat, openChatId }) {
                   key={c._id}
                   convo={c}
                   unreadCount={unread[c._id] || 0}
-                  onClick={() => {
+                  onClick={async () => {
+                    try {
+                      await api.put(`/conversations/${c._id}/unread/reset`);
+                    } catch (err) {
+                      console.error("Conversation unread reset failed:", err);
+                    }
                     setUnread((prev) => ({ ...prev, [c._id]: 0 }));
                     onSelectChat(c);
                   }}
@@ -322,10 +327,7 @@ export default function Sidebar({ onSelectChat, openChatId }) {
                       });
                     }}
                   >
-                    <ConversationItem
-                      convo={g}
-                      unreadCount={groupUnread}
-                    />
+                    <ConversationItem convo={g} unreadCount={groupUnread} />
                   </div>
                 );
               })

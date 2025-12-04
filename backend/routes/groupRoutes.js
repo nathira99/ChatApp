@@ -1,17 +1,18 @@
 // backend/routes/groupRoutes.js
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
+// const multer = require("multer");
+const upload = require("../utils/uploads")
 const { protect } = require("../middleware/authMiddleware");
 const groupController = require("../controllers/groupController");
 
 // multer storage (same as you used)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_")),
-});
-const upload = multer({ storage });
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => cb(null, "uploads/"),
+//   filename: (req, file, cb) =>
+//     cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_")),
+// });
+// const upload = multer({ storage });
 
 // Create, list
 router.post("/", protect, groupController.createGroup);
@@ -42,6 +43,8 @@ router.post(
   groupController.uploadGroupFile
 );
 
-router.put("/groups/:groupId/unread/reset",protect, groupController.resetGroupUnread);
+console.log(`:groupId`)
+
+router.put("/:groupId/unread/reset",protect, groupController.resetGroupUnread);
 
 module.exports = router;

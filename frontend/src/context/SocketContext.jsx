@@ -31,7 +31,13 @@ export const SocketProvider = ({ children }) => {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
+
+        if(!res.ok) throw new Error(res.statusText);
+
         const groups = await res.json();
+
+        if(!Array.isArray(groups)) throw new Error("Invalid groups data received");
+        
         groups.forEach(g => {
           newSocket.emit("join:group", g._id);
         })

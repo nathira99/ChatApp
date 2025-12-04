@@ -134,3 +134,15 @@ exports.startChat = async (req, res) => {
     return res.status(500).json({ error: "Server error starting chat" });
   }
 };
+exports.resetPrivateUnread = async (req, res) => {
+  const convoId = req.params.convoId;
+  const userId = req.user._id.toString();
+
+  const convo = await Conversation.findById(convoId);
+  if (!convo) return res.status(404).json({ message: "Conversation not found" });
+
+  convo.unread.set(userId, 0);
+
+  await convo.save();
+  res.json({ success: true });
+};

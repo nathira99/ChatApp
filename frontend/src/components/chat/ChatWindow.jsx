@@ -168,6 +168,7 @@ useEffect(() => {
             "Content-Type": "multipart/form-data",
           },
         });
+        console.log(`${chat._id}`);
 
         newMsg = res.data;
 

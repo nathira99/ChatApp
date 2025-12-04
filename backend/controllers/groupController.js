@@ -382,20 +382,21 @@ exports.sendGroupMessage = async (req, res) => {
 // ===============================================
 exports.uploadGroupFile = async (req, res) => {
   try {
-    if (!req.file)
-      return res.status(400).json({ error: "No file uploaded" });
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     const { groupId } = req.params;
     const senderId = req.user._id.toString();
-    const filePath = `/uploads/${req.file.filename}`;
+    const cloudUrl = req.file.path || req.file.secure_url || req.file.url;
+
+    if (!cloudUrl)
+      return res.status(500).json({ error: "Cloudinary upload failed" });
 
     // Fetch group with members
     const group = await Group.findById(groupId).populate("members", "_id name");
     if (!group) return res.status(404).json({ message: "Group not found" });
 
-    const memberIds = group.members.map((m) =>
-      m._id ? m._id.toString() : m.toString()
-    );
+    const memberIds = group.members.map((m) => 
+      m._id ? m._id.toString() : m.toString());
 
     // Permission check
     if (!memberIds.includes(senderId)) {
@@ -404,27 +405,32 @@ exports.uploadGroupFile = async (req, res) => {
         .json({ message: "You are not a member of this group" });
     }
 
+        // Detect type
+    const mimetype = req.file.mimetype || "";
+    let type = "document";
+
+    if (mimetype.startsWith("image/")) type = "image";
+    else if (mimetype.startsWith("video/")) type = "video";
+    else if (mimetype.startsWith("audio/")) type = "audio";
+
+
     // Create message
     const message = await Message.create({
       sender: senderId,
       group: groupId,
-      content: `${req.file.originalname}`,
-      fileUrl: filePath,
-      fileType: req.file.mimetype,
+      content: req.file.originalname,
+      fileUrl: cloudUrl,
+      fileType: mimetype,
       fileName: req.file.originalname,
       type: "file",
     });
 
     const sender = await User.findById(senderId).select("name");
 
-    // ===============================================
-    // ⭐ UPDATE UNREAD COUNTS FOR EVERY MEMBER EXCEPT SENDER
-    // ===============================================
-    group.unread = group.unread || {};
-
     memberIds.forEach((memberId) => {
       if (memberId !== senderId) {
-        group.unread[memberId] = (group.unread[memberId] || 0) + 1;
+        const prev = group.unread.get(memberId) || 0;
+        group.unread.set(memberId, prev + 1);
       }
     });
 
@@ -443,10 +449,13 @@ exports.uploadGroupFile = async (req, res) => {
     // ===============================================
     // ⭐ SOCKET EMIT
     // ===============================================
-    req.app.get("io")?.to(groupId).emit("group:message:receive", {
-      ...populated.toObject(),
-      conversationId: groupId,
-    });
+    req.app
+      .get("io")
+      ?.to(groupId)
+      .emit("group:message:receive", {
+        ...populated.toObject(),
+        conversationId: groupId,
+      });
 
     req.app.get("io")?.emit("groups:refresh");
 
@@ -464,8 +473,9 @@ exports.resetGroupUnread = async (req, res) => {
   const group = await Group.findById(groupId);
   if (!group) return res.status(404).json({ message: "Group not found" });
 
-  group.unread = group.unread || {};
-  group.unread[userId] = 0;
+  group.unread.set(userId, 0);
+  
+  group.markModified("unread");
 
   await group.save();
 
