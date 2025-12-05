@@ -27,7 +27,7 @@ function formatMessageTime(timestamp) {
 }
 
 export default function ConversationItem({ convo, active, onClick, unreadCount = 0 }) {
-    // console.log("Conversation:", convo._id, "Unread:", unreadCount); 
+    // console.log("unreadCount", unreadCount); 
 
   const me = JSON.parse(localStorage.getItem("user"))?._id;
   const isAdmin = convo.isGroup && convo.admins.includes(me);
@@ -94,7 +94,7 @@ export default function ConversationItem({ convo, active, onClick, unreadCount =
 
       {/* 🔴 unread badge */}
       {unreadCount > 0 && (
-        <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full ml-2">
+        <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full ml-2">
           {unreadCount}
         </span>
       )}

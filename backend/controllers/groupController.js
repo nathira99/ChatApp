@@ -38,6 +38,17 @@ exports.getMyGroups = async (req, res) => {
           .populate("sender", "name")
           .lean();
 
+    let unreadCount = 0;
+    if (g.unread) {
+      if ( typeof g.unread.get === 'function' ) {
+        unreadCount = g.unread.get(userId) || 0;
+      } else {
+        unreadCount = g.unread[userId] || 0;
+      }
+    }
+
+    const myUnread = g.unread?.[userId] ?? 0;
+
         return {
           _id: g._id,
           name: g.name || "Group",
@@ -51,10 +62,12 @@ exports.getMyGroups = async (req, res) => {
           imageUrl: g.imageUrl || "",
           members: g.members || [],
           admins: g.admins || [],
+          unreadCount: myUnread ,
         };
       })
     );
 
+    console.log("API groups:", result);
     return res.json(result);
   } catch (err) {
     // <-- Make sure you log the error stack so you can debug the real cause
@@ -342,7 +355,7 @@ exports.sendGroupMessage = async (req, res) => {
 
     memberIds.forEach((memberId) => {
       if (memberId !== senderId) {
-        group.unread[memberId] = (group.unread[memberId] || 0) + 1;
+        group.unread.set(memberId, (group.unread.get(memberId) || 0) + 1);
       }
     });
 
@@ -467,19 +480,35 @@ exports.uploadGroupFile = async (req, res) => {
 };
 
 exports.resetGroupUnread = async (req, res) => {
-  const groupId = req.params.groupId;
-  const userId = req.user._id.toString();
+  try {
+    const groupId = req.params.groupId;
+    const userId = req.user._id.toString();
 
-  const group = await Group.findById(groupId);
-  if (!group) return res.status(404).json({ message: "Group not found" });
+    console.log(`[resetGroupUnread] called: group=${groupId} user=${userId} url=${req.originalUrl} method=${req.method} time=${new Date().toISOString()} from=${req.ip} referer=${req.get('referer')}`);
 
-  group.unread.set(userId, 0);
-  
-  group.markModified("unread");
+    const group = await Group.findById(groupId);
+    if (!group) {
+      console.log(`[resetGroupUnread] group not found: ${groupId}`);
+      return res.status(404).json({ message: "Group not found" });
+    }
 
-  await group.save();
+    group.unread = group.unread || new Map();
+    // If map stored as object in DB, handle both:
+    if (typeof group.unread.get !== "function") {
+      // convert plain object -> Map-like behavior safely
+      group.unread = new Map(Object.entries(group.unread || {}).map(([k,v]) => [k, Number(v)]));
+    }
 
-  return res.json({ success: true });
+    group.unread.set(userId, 0);
+    group.markModified("unread");
+    await group.save();
+
+    console.log(`[resetGroupUnread] success group=${groupId} user=${userId}`);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[resetGroupUnread] ERROR", err);
+    return res.status(500).json({ message: "Server error" });
+  }
 };
 
 // ===============================================

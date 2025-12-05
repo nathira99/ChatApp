@@ -73,14 +73,13 @@ export default function Sidebar({ onSelectChat, openChatId }) {
       );
       playSound();
 
-      // setUnread((prev) => ({
-      //   ...prev,
-      //   [groupId]: (prev[groupId] || 0) + 1,
-      // }));
-
-      // triggerRefresh();
-      // important for unread badge
-      loadGroups();
+      setGroups((prev) => 
+        prev.map((g) =>
+          String(g._id) === String(groupId)
+            ? {...g,unreadCount: (g.unreadCount || 0) + 1 } 
+            : g
+        )
+      );
     };
 
     socket.on("message:receive", privateListener);
@@ -128,7 +127,6 @@ export default function Sidebar({ onSelectChat, openChatId }) {
           otherUser: other,
         };
       });
-
       setConversations(normalized);
     } catch (err) {
       console.error("Load conversations failed:", err);
@@ -141,15 +139,23 @@ export default function Sidebar({ onSelectChat, openChatId }) {
       const raw = await getUserGroups();
       const me = user?._id;
 
+      const intial = {};
       const normalized = (raw || []).map((g) => {
         const isYou = String(g.lastMessageSender) === String(me);
 
-        const unread = g.unread?.[me] || 0;
+        const unreadCount = g.unreadCount ?? 0;
+        intial[g._id] = unreadCount;
 
-        setUnread((prev) => ({
-          ...prev,
+        setUnread((prev) => {
+          if(prev[g._id] !== undefined) {
+            return prev;
+          } 
+
+          return{
+            ...prev,
           [g._id]: unread,
-        }));
+        };
+        });
 
         return {
           _id: g._id,
@@ -163,12 +169,12 @@ export default function Sidebar({ onSelectChat, openChatId }) {
               ? `You: ${g.lastMessage}`
               : `${g.lastMessageSenderName}: ${g.lastMessage}`
             : "No messages yet",
-          unreadCount: unread,
+          unreadCount,
           admins: g.admins || [],
         };
       });
-
       setGroups(normalized);
+      setUnread((prev) => ({ ...intial, ...prev }));
     } catch {
       setGroups([]);
     }
@@ -177,6 +183,10 @@ export default function Sidebar({ onSelectChat, openChatId }) {
   useEffect(() => {
     loadConversations();
     loadGroups();
+  }, []);
+
+  useEffect(() => {
+    getUserGroups().then(res => console.log("API groups ==>",res));
   }, []);
 
   /* ----------------------------------------------
@@ -197,8 +207,8 @@ export default function Sidebar({ onSelectChat, openChatId }) {
     socket.on("groups:refresh", refresh);
 
     return () => {
-      socket.off("message:receive", refresh);
-      socket.off("group:message:receive", refresh);
+        socket.off("message:receive", refresh);
+        socket.off("group:message:receive", refresh);    
       socket.off("users:online", refresh);
       socket.off("users:refresh", refresh);
       socket.off("groups:refresh", refresh);
@@ -300,8 +310,6 @@ export default function Sidebar({ onSelectChat, openChatId }) {
               </p>
             ) : (
               groups.map((g) => {
-                const groupUnread = unread[g._id] ?? g.unreadCount ?? 0;
-
                 return (
                   <div
                     key={g._id}
@@ -312,11 +320,11 @@ export default function Sidebar({ onSelectChat, openChatId }) {
                       } catch (err) {
                         console.error("Group unread reset failed:", err);
                       }
-                      // setGroups((prev) =>
-                      //   prev.map((x) =>
-                      //     x._id === g._id ? { ...x, unreadCount: 0 } : x
-                      //   )
-                      // );
+                      setGroups((prev) =>
+                        prev.map((x) =>
+                          x._id === g._id ? { ...x, unreadCount: 0 } : x
+                        )
+                      );
 
                       setUnread((prev) => ({ ...prev, [g._id]: 0 }));
 
@@ -327,7 +335,10 @@ export default function Sidebar({ onSelectChat, openChatId }) {
                       });
                     }}
                   >
-                    <ConversationItem convo={g} unreadCount={groupUnread} />
+                    <ConversationItem
+                      convo={g}
+                      unreadCount={g.unreadCount || 0}
+                    />
                   </div>
                 );
               })
