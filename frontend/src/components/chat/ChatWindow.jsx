@@ -219,7 +219,7 @@ useEffect(() => {
   return (
     <div className="flex flex-col h-[100dvh] bg-gray-50 dark:bg-gray-900 dark:text-gray-200">
       {/* HEADER */}
-      <div className="bg-white dark:bg-gray-800 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+      <div className="sticky top-0 z-30 bg-white dark:bg-gray-800 sm:bg-gray-50 dark:sm:bg-gray-900 sm:px-4 py-2 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
@@ -306,11 +306,11 @@ useEffect(() => {
 
       {/* MESSAGE AREA */}
       <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 h-full overflow-y-auto">
           <MessageList messages={filteredMessages} currentUserId={user?._id} />
         </div>
 
-        <div className="border-t bg-white dark:bg-gray-800 p-2 flex-shrink-0">
+        <div className="sticky bottom-0 z-30 border-t bg-white dark:bg-gray-800 p-2 flex-shrink-0">
           <MessageInput onSend={handleSend} onFileSend={handleFileSend} />
         </div>
       </div>
