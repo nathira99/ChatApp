@@ -484,18 +484,14 @@ exports.resetGroupUnread = async (req, res) => {
     const groupId = req.params.groupId;
     const userId = req.user._id.toString();
 
-    console.log(`[resetGroupUnread] called: group=${groupId} user=${userId} url=${req.originalUrl} method=${req.method} time=${new Date().toISOString()} from=${req.ip} referer=${req.get('referer')}`);
 
     const group = await Group.findById(groupId);
     if (!group) {
-      console.log(`[resetGroupUnread] group not found: ${groupId}`);
       return res.status(404).json({ message: "Group not found" });
     }
 
     group.unread = group.unread || new Map();
-    // If map stored as object in DB, handle both:
     if (typeof group.unread.get !== "function") {
-      // convert plain object -> Map-like behavior safely
       group.unread = new Map(Object.entries(group.unread || {}).map(([k,v]) => [k, Number(v)]));
     }
 
@@ -503,7 +499,6 @@ exports.resetGroupUnread = async (req, res) => {
     group.markModified("unread");
     await group.save();
 
-    console.log(`[resetGroupUnread] success group=${groupId} user=${userId}`);
     return res.json({ success: true });
   } catch (err) {
     console.error("[resetGroupUnread] ERROR", err);

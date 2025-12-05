@@ -102,10 +102,7 @@ useEffect(() => {
       if (prev.some((m) => String(m._id) === String(msg._id))) return prev;
       return [...prev, msg];
     });
-    
-    console.log("String(msg.conversationId)", String(msg.conversationId));
-    console.log("String(activeId)",String(activeId));
-  };
+ };
 
   // Always remove old listener first (prevents double emit)
   socket.off("group:message:receive", handler);

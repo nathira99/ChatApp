@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem("token");
       const userData = localStorage.getItem("user");
-      console.log("Auth user state changed:", user);
+      console.log("Auth user state changed:", userData);
       
       if (token && userData && userData !== "undefined") {
         const parsed = JSON.parse(userData);
