@@ -29,7 +29,16 @@ export default function Sidebar({ onSelectChat, openChatId }) {
     };
 
     const notify = (chatId, title, body) => {
-      if (String(chatId) === String(openChatId)) return;
+
+      const isActiveChat = openChatId && String(openChatId) === String(chatId);
+
+      if (isActiveChat) {
+        api.put(`/conversations/${chatId}/unread/reset`).catch(() => {});
+
+        setUnread((prev) => ({ ...prev, [chatId]: 0 }));
+
+        return; 
+      }
 
       setUnread((prev) => ({
         ...prev,
@@ -61,8 +70,18 @@ export default function Sidebar({ onSelectChat, openChatId }) {
       if (msg.sender?._id === user._id) return;
 
       const groupId = msg.conversationId;
+// If chat window open for this chat → reset immediately, don't increment
+      const isActiveChat = openChatId && String(openChatId) === String(groupId);
 
-      if (String(openChatId) === String(groupId)) return;
+      if (isActiveChat) {
+        // instantly reset backend unread
+        api.put(`/groups/${groupId}/unread/reset`).catch(() => {});
+
+        // instantly reset frontend unread
+        setUnread((prev) => ({ ...prev, [groupId]: 0 }));
+
+        return; // IMPORTANT — don't notify, don't badge
+      }
 
       // notification only
       notify(
@@ -73,10 +92,10 @@ export default function Sidebar({ onSelectChat, openChatId }) {
       );
       playSound();
 
-      setGroups((prev) => 
+      setGroups((prev) =>
         prev.map((g) =>
           String(g._id) === String(groupId)
-            ? {...g,unreadCount: (g.unreadCount || 0) + 1 } 
+            ? { ...g, unreadCount: (g.unreadCount || 0) + 1 }
             : g
         )
       );
@@ -147,14 +166,14 @@ export default function Sidebar({ onSelectChat, openChatId }) {
         intial[g._id] = unreadCount;
 
         setUnread((prev) => {
-          if(prev[g._id] !== undefined) {
+          if (prev[g._id] !== undefined) {
             return prev;
-          } 
+          }
 
-          return{
+          return {
             ...prev,
-          [g._id]: unread,
-        };
+            [g._id]: unread,
+          };
         });
 
         return {
@@ -186,7 +205,7 @@ export default function Sidebar({ onSelectChat, openChatId }) {
   }, []);
 
   useEffect(() => {
-    getUserGroups().then(res => console.log("API groups ==>",res));
+    getUserGroups().then((res) => console.log("API groups ==>", res));
   }, []);
 
   /* ----------------------------------------------
@@ -207,8 +226,8 @@ export default function Sidebar({ onSelectChat, openChatId }) {
     socket.on("groups:refresh", refresh);
 
     return () => {
-        socket.off("message:receive", refresh);
-        socket.off("group:message:receive", refresh);    
+      socket.off("message:receive", refresh);
+      socket.off("group:message:receive", refresh);
       socket.off("users:online", refresh);
       socket.off("users:refresh", refresh);
       socket.off("groups:refresh", refresh);
