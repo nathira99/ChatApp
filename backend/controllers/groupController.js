@@ -67,7 +67,7 @@ exports.getMyGroups = async (req, res) => {
       })
     );
 
-    console.log("API groups:", result);
+    // console.log("API groups:", result);
     return res.json(result);
   } catch (err) {
     // <-- Make sure you log the error stack so you can debug the real cause

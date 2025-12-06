@@ -1,7 +1,13 @@
 const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken");
+const { User } = require("./models/User");
+const JWT_SECRET = process.env.JWT_SECRET || "secret";
 
-// In-memory user tracking (userId → socketId)
+// In-memory user tracking (userId → Set(socketId))
 const onlineUsers = new Map();
+
+// status string
+const userStatus = new Map();
 
 const initSocket = (server) => {
   const io = new Server(server, {
@@ -12,14 +18,77 @@ const initSocket = (server) => {
     },
   });
 
+  const setOnline = (userId, socketId) => {
+    if (!userId) return;
+    const set = onlineUsers.get(userId) || new Set();
+    set.add(socketId);
+    onlineUsers.set(userId, set);
+    userStatus.set(userId, "online");
+    io.emit("user:status", { userId, status: "online" });
+    io.emit("users:online", Array.from(onlineUsers.keys()));
+    console.log(`⚡ Status update -> User: ${userId} | Status: ${userStatus.get(userId)}`);
+  };
+
+  const setAway = (userId) => {
+    if (!userId) return;
+    userStatus.set(userId, "away");
+    io.emit("user:status", { userId, status: "away" });
+    console.log(`⚙ Status updated: ${userId} → away`);
+  };
+
+  const setOfflineForSocket = (socketId) => {
+    for (const [userId, set] of onlineUsers.entries()) {
+      if (set.has(socketId)) {
+        set.delete(socketId);
+        if (set.size === 0) {
+          onlineUsers.delete(userId);
+          userStatus.set(userId, "offline");
+          io.emit("user:status", { userId, status: "offline" });
+        }
+        io.emit("users:online", Array.from(onlineUsers.keys()));
+        console.log(`🔴 User ${userId} disconnected (socket ${socketId}).`);
+        break;
+      }
+    }
+  };
+
   io.on("connection", (socket) => {
     console.log("⚡ User connected:", socket.id);
+    const { token } = socket.handshake.auth;
+    let userId = null;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        userId = decoded.id;
+      } catch (err) {
+        console.error("Error verifying token:", err);
+      }
+    }
+
+    socket.data.userId = userId || null;
+
+    console.log("🟢 User connected:", socket.id, "userId:", userId);
+
+    if (userId) {
+      setOnline(userId, socket.id);
+      socket.join(`user-${userId}`);
+    } else {
+      console.log("No UserId provided...");
+    }
 
     // 🟢 REGISTER USER FOR TARGETED EVENTS (VERY IMPORTANT)
     socket.on("register", (userId) => {
       if (!userId) return;
-      socket.join(userId); // now you can send events to that specific user
-      onlineUsers.set(userId, socket.id);
+      socket.data.userId = userId;
+      setOnline(userId, socket.id);
+
+      socket.join(userId);
+
+      // PATCHED — FIXED BUG: Previously overwrote the Set
+      const set = onlineUsers.get(userId) || new Set();
+      set.add(socket.id);
+      onlineUsers.set(userId, set);
 
       console.log("🟢 Registered user:", userId);
       io.emit("users:online", Array.from(onlineUsers.keys()));
@@ -28,7 +97,12 @@ const initSocket = (server) => {
     // 🟢 User comes online
     socket.on("user:online", (userId) => {
       if (!userId) return;
-      onlineUsers.set(userId, socket.id);
+
+      // PATCHED — FIXED SAME BUG
+      const set = onlineUsers.get(userId) || new Set();
+      set.add(socket.id);
+      onlineUsers.set(userId, set);
+
       console.log(`🟢 User ${userId} connected`);
       io.emit("users:online", Array.from(onlineUsers.keys()));
     });
@@ -37,22 +111,25 @@ const initSocket = (server) => {
     socket.on("message:send", (data) => {
       const { receiverId, senderId } = data;
 
-      const receiverSocketId = onlineUsers.get(receiverId);
-      const senderSocketId = onlineUsers.get(senderId);
+      const receiverSockets = onlineUsers.get(receiverId);
+      const senderSockets = onlineUsers.get(senderId);
 
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("message:receive", data);
-        io.to(receiverSocketId).emit("users:refresh");
+      if (receiverSockets) {
+        for (const id of receiverSockets) {
+          io.to(id).emit("message:receive", data);
+          io.to(id).emit("users:refresh");
+        }
       }
 
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("message:receive", data);
-        io.to(senderSocketId).emit("users:refresh");
+      if (senderSockets) {
+        for (const id of senderSockets) {
+          io.to(id).emit("message:receive", data);
+          io.to(id).emit("users:refresh");
+        }
       }
     });
 
     // 👥 Chat join & leave
-
     socket.on("join", (userId) => {
       socket.join(userId);
       console.log(`👥 Joined chat: ${userId}`);
@@ -69,15 +146,13 @@ const initSocket = (server) => {
       console.log(`🚪 Left group: ${groupId}`);
     });
 
-
-    // 🧩 Profile update broadcast (when user updates profile)
+    // 🧩 Profile update broadcast
     socket.on("user:profile:update", (updatedUser) => {
       io.emit("user:profile:update", updatedUser);
-
       console.log(`🧩 User profile updated: ${updatedUser.name}`);
     });
 
-    // 🔄 Status change (online, offline, busy, etc.)
+    // 🔄 Status change
     socket.on("user:status:update", ({ userId, status }) => {
       io.emit("user:status:update", { userId, status });
       console.log(`⚙ Status updated: ${userId} → ${status}`);
@@ -85,14 +160,7 @@ const initSocket = (server) => {
 
     // 🔴 On disconnect
     socket.on("disconnect", () => {
-      for (const [userId, socketId] of onlineUsers.entries()) {
-        if (socketId === socket.id) {
-          onlineUsers.delete(userId);
-          console.log(`🔴 User ${userId} disconnected`);
-          break;
-        }
-      }
-      io.emit("users:online", Array.from(onlineUsers.keys()));
+      setOfflineForSocket(socket.id);
     });
   });
 

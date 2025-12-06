@@ -80,6 +80,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // ⬅ REQUIRED for sending "offline" to socket
+    window.dispatchEvent(new Event("APP_USER_LOGGED_OUT"));
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
@@ -89,8 +92,8 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (data) => {
     setUser((prev) => {
       const updated = {...prev, ...data};
-    localStorage.setItem("user", JSON.stringify(updated));
-    return updated;
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
     });
   };
 

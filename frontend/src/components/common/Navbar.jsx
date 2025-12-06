@@ -3,22 +3,22 @@ import { useAuth } from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { LogOut, User, Settings } from "lucide-react";
-import ProfilePage from "../../pages/ProfilePage";
+import { useSocket } from "../../context/SocketContext";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { userProfiles } = useSocket();
 
   if (!user) return null;
 
-  const hideNavbarRoutes = [
-    "/chat",
-  ];
+  const targetId = user._id;
+  const liveStatus = userProfiles[targetId]?.status || "offline";
 
-  const shouldHideNavbar = hideNavbarRoutes.some(
-    (route) => 
+  const hideNavbarRoutes = ["/chat"];
+  const shouldHideNavbar = hideNavbarRoutes.some((route) =>
     location.pathname.startsWith(route)
   );
 
@@ -43,9 +43,26 @@ export default function Navbar() {
           onClick={() => setOpen(!open)}
           className="font-medium text-gray-800 dark:text-gray-200 hover:text-blue-600 flex items-center gap-2"
         >
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
-            {user.name.charAt(0).toUpperCase()}
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+
+            {/* STATUS DOT FIXED */}
+            <span
+              className={`
+                absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white
+                ${
+                  liveStatus === "online"
+                    ? "bg-green-500"
+                    : liveStatus === "away"
+                    ? "bg-yellow-500"
+                    : "bg-gray-300"
+                }
+              `}
+            ></span>
           </div>
+
           {user.name}
         </button>
 
@@ -68,21 +85,24 @@ export default function Navbar() {
             )}
 
             <hr className="my-1 border-gray-300 dark:border-gray-600" />
+
             <button
-            onClick={() => navigate("/profile")}
-            className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition dark:text-gray-200 dark:hover:bg-gray-600"
-          >
+              onClick={() => navigate("/profile")}
+              className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition dark:text-gray-200 dark:hover:bg-gray-600"
+            >
               <User size={18} /> Profile
             </button>
+
             <button
-            onClick={() => navigate("/settings")}
-            className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition dark:text-gray-200 dark:hover:bg-gray-600"
-          >
-            <Settings size={18} /> Settings
+              onClick={() => navigate("/settings")}
+              className="flex px-3 py-2 items-center gap-2 hover:opacity-90 transition dark:text-gray-200 dark:hover:bg-gray-600"
+            >
+              <Settings size={18} /> Settings
             </button>
+
             <button
               onClick={logout}
-            className="flex px-3 py-2 items-center text-red-600 gap-2 hover:opacity-90 transition"
+              className="flex px-3 py-2 items-center text-red-600 gap-2 hover:opacity-90 transition"
             >
               <LogOut size={18} /> Logout
             </button>

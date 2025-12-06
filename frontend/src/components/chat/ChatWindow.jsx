@@ -25,7 +25,7 @@ import { useNavigate } from "react-router-dom";
 import { triggerRefresh } from "../../utils/triggerRefresh";
 
 export default function ChatWindow({ chat, onClose }) {
-  const { socket } = useSocket();
+  const { socket, userProfiles } = useSocket();
   const { user } = useAuth();
 
   const [messages, setMessages] = useState([]);
@@ -37,6 +37,13 @@ export default function ChatWindow({ chat, onClose }) {
 
   const menuRef = useRef(null);
   const navigate = useNavigate();
+
+  const targetId = chat.userId === user._id ? chat._id : chat.userId;
+  const liveStatus = !chat.isGroup
+    ? userProfiles[targetId]?.status : null;
+    console.log("me:", user._id);
+    console.log("target:", targetId);
+    console.log("LIVE STATUS:", liveStatus);
 
   console.log("ACTIVE CHAT:", chat);
   // -------- Close menu when click outside ----------
@@ -91,32 +98,31 @@ export default function ChatWindow({ chat, onClose }) {
   }, [chat, user, socket]);
 
   // -------- SOCKET REALTIME LISTENERS ----------
-useEffect(() => {
-  if (!socket || !chat) return;
+  useEffect(() => {
+    if (!socket || !chat) return;
 
-  const activeId = chat.conversationId || chat._id;
+    const activeId = chat.conversationId || chat._id;
 
-  const handler = (msg) => {
-    if (String(msg.conversationId) !== String(activeId)) return;
-    setMessages((prev) => {
-      if (prev.some((m) => String(m._id) === String(msg._id))) return prev;
-      return [...prev, msg];
-    });
- };
+    const handler = (msg) => {
+      if (String(msg.conversationId) !== String(activeId)) return;
+      setMessages((prev) => {
+        if (prev.some((m) => String(m._id) === String(msg._id))) return prev;
+        return [...prev, msg];
+      });
+    };
 
-  // Always remove old listener first (prevents double emit)
-  socket.off("group:message:receive", handler);
-  socket.off("message:receive", handler);
-
-  socket.on("group:message:receive", handler);
-  socket.on("message:receive", handler);
-
-  return () => {
+    // Always remove old listener first (prevents double emit)
     socket.off("group:message:receive", handler);
     socket.off("message:receive", handler);
-  };
 
-}, [socket, chat?._id]);
+    socket.on("group:message:receive", handler);
+    socket.on("message:receive", handler);
+
+    return () => {
+      socket.off("group:message:receive", handler);
+      socket.off("message:receive", handler);
+    };
+  }, [socket, chat?._id]);
 
   // -------- SEARCH FILTER ----------
   useEffect(() => {
@@ -134,13 +140,13 @@ useEffect(() => {
   const handleSend = async (content) => {
     if (!content.trim()) return;
 
-    try { 
-      if(chat.isGroup){
-         await sendGroupMessage(chat._id, content);
-        }
-        else {
-      const newMsg = await sendMessage(chat.userId, content);
-      setMessages((prev) => [...prev, newMsg]);}
+    try {
+      if (chat.isGroup) {
+        await sendGroupMessage(chat._id, content);
+      } else {
+        const newMsg = await sendMessage(chat.userId, content);
+        setMessages((prev) => [...prev, newMsg]);
+      }
 
       triggerRefresh();
     } catch (err) {
@@ -251,9 +257,23 @@ useEffect(() => {
                   </span>
                 )}
               </h2>
-              <div className="text-xs text-gray-500">
-                {chat.isGroup ? "Group Chat" : "Personal Chat"}
-              </div>
+
+              {chat.isGroup ? (
+                <div className="text-xs text-gray-500">Group Chat</div>
+              ) : (
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      liveStatus === "online"
+                        ? "bg-green-500"
+                        : liveStatus === "away"
+                        ? "bg-yellow-500" 
+                        :  "bg-gray-400"
+                    }`}
+                  ></span>
+                  <span>{liveStatus || "Offline"}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

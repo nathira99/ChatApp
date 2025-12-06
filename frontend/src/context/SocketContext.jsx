@@ -1,53 +1,79 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+} from "react";
 import { io } from "socket.io-client";
 import { getAvatarUrl } from "../utils/avatar";
+import { useAuth } from "../hooks/useAuth";
 
 const SocketContext = createContext();
 
 export const SocketProvider = ({ children }) => {
+  const { user } = useAuth();
   const [socket, setSocket] = useState(null);
+  const socketRef = useRef(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [userProfiles, setUserProfiles] = useState({}); // 🧩 store all user info (avatar, status, etc.)
+  const [userProfiles, setUserProfiles] = useState({});
 
+  // --------------------- CONNECT SOCKET --------------------------
   useEffect(() => {
-    if (socket) return;
+    // user logged out → stop socket
+    if (!user) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setSocket(null);
+      }
+      return;
+    }
 
-    // connect socket
+    // prevent double connect
+    if (socketRef.current) return;
+
     const newSocket = io(import.meta.env.VITE_SOCKET_URL, {
       transports: ["websocket", "polling"],
+      auth: { token: localStorage.getItem("token"),
+        userId: JSON.parse(localStorage.getItem("user"))?._id
+       },
       withCredentials: true,
+      autoConnect: true,
     });
 
-    newSocket.on("connect",async () => {
-      console.log("✅ Socket connected:", newSocket.id);
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (user?._id) {
-        newSocket.emit("register", user._id);
-      }
-      try{
+    socketRef.current = newSocket;
+    setSocket(newSocket);
+
+    // --------------------- ON CONNECT --------------------------
+    newSocket.on("connect", async () => {
+      console.log("✅ Socket connected:", newSocket.id, "for user:", user._id);
+
+      newSocket.emit("register", user._id);
+
+      // Join all groups
+      try {
         const res = await fetch(`${import.meta.env.VITE_API_URL}/groups/my`, {
-          headers:{
+          headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
 
-        if(!res.ok) throw new Error(res.statusText);
-
         const groups = await res.json();
 
-        if(!Array.isArray(groups)) throw new Error("Invalid groups data received");
-        
-        groups.forEach(g => {
-          newSocket.emit("join:group", g._id);
-        })
-      }catch(err){
+        if (Array.isArray(groups)) {
+          groups.forEach((g) => newSocket.emit("join:group", g._id));
+        }
+      } catch (err) {
         console.error("Group auto join failed:", err);
       }
+
       const token = localStorage.getItem("token");
-      if (token) newSocket.emit("user:connected", token); // identify logged user to backend
+      if (token) newSocket.emit("user:connected", token);
     });
 
+    // --------------------- ACCOUNT EVENTS --------------------------
     newSocket.on("account:deactivated", (data) => {
       alert(data.message || "Your account has been deactivated.");
       localStorage.clear();
@@ -64,17 +90,40 @@ export const SocketProvider = ({ children }) => {
       alert(data.message);
     });
 
-    // 🔹 Handle online users list
+    // --------------------- ONLINE USERS --------------------------
     newSocket.on("users:online", (users) => {
-      setOnlineUsers(users);
+      setOnlineUsers(users || []);
     });
 
-    // 🔹 Handle real-time user profile updates
+    // --------------------- USER STATUS --------------------------
+    newSocket.on("user:status", ({ userId, status }) => {
+      setUserProfiles((prev) => ({
+        ...prev,
+        [userId]: {
+          ...(prev[userId] || {}),
+          status,
+        },
+      }));
+    });
+
+    // --------------------- STATUS UPDATE EVENTS --------------------------
+    newSocket.on("user:status:update", ({ userId, status }) => {
+      console.log(`⚡ Status update -> User: ${userId} | Status: ${status}`);
+      setUserProfiles((prev) => ({
+        ...prev,
+        [userId]: {
+          ...(prev[userId] || {}),
+          status,
+        },
+      }));
+    });
+
+    // --------------------- PROFILE UPDATED --------------------------
     newSocket.on("user:profile:update", (updatedUser) => {
       setUserProfiles((prev) => ({
         ...prev,
         [updatedUser._id]: {
-          ...prev[updatedUser._id],
+          ...(prev[updatedUser._id] || {}),
           ...updatedUser,
           avatar: getAvatarUrl(updatedUser.avatar),
         },
@@ -82,43 +131,66 @@ export const SocketProvider = ({ children }) => {
       console.log("🧩 Updated user profile:", updatedUser.name);
     });
 
-    // 🔹 Handle user status changes (online/offline/busy)
-    newSocket.on("user:status:update", ({ userId, status }) => {
-      setUserProfiles((prev) => ({
-        ...prev,
-        [userId]: { ...prev[userId], status },
-      }));
-    });
-
+    // --------------------- DISCONNECT --------------------------
     newSocket.on("disconnect", () => {
       console.log("❌ Socket disconnected");
     });
 
-    setSocket(newSocket);
-    return () => newSocket.close();
-  }, []);
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setSocket(null);
+      }
+    };
+  }, [user]);
 
-  /**
-   * Emit status change (used when user goes offline/online/busy)
-   */
+  // --------------------- STATUS HANDLING (online/away) --------------------------
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    let lastStatus = null;
+    let debounceTimer = null;
+
+    const sendStatus = (status) => {
+      if (status === lastStatus) return;
+
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        socket.emit("user:status:update", { userId: user._id, status });
+        lastStatus = status;
+      }, 500);
+    };
+
+    const onFocus = () => sendStatus("online");
+    const onBlur = () => sendStatus("away");
+
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+
+    sendStatus("online");
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, [socket, user]);
+
+  // --------------------- MANUAL STATUS UPDATE --------------------------
   const updateStatus = (status) => {
     if (socket && socket.connected) {
-      socket.emit("user:status:update", status);
+      socket.emit("user:status:update", { userId: user._id, status });
     }
   };
 
-  /**
-   * Broadcast local profile update immediately after saving
-   */
+  // --------------------- PROFILE BROADCAST --------------------------
   const broadcastProfileUpdate = (updatedUser) => {
     if (socket && socket.connected) {
       socket.emit("user:profile:update", updatedUser);
     }
   };
 
-  const triggerRefresh = () => { 
-    setRefreshTrigger(Date.now());
-  };
+  const triggerRefresh = () => setRefreshTrigger(Date.now());
 
   return (
     <SocketContext.Provider
@@ -129,7 +201,7 @@ export const SocketProvider = ({ children }) => {
         updateStatus,
         broadcastProfileUpdate,
         refreshTrigger,
-        triggerRefresh
+        triggerRefresh,
       }}
     >
       {children}

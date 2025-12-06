@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     avatar: { type: String, default: "" },
     about: { type: String, default: "" },
-    status: { type: String, enum: ["online", "offline", "away", "busy"], default: "offline" },
+    status: { type: String, enum: ["online", "offline", "away"], default: "offline" },
     isVerified: {
       type: Boolean,
       default: true,

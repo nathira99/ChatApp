@@ -1,5 +1,6 @@
 import React from "react";
 import { formatDistanceToNow, isToday } from "date-fns";
+import { useSocket } from "../../context/SocketContext";
 
 function formatMessageTime(timestamp) {
   if (!timestamp) return "";
@@ -21,15 +22,23 @@ function formatMessageTime(timestamp) {
     return `${hours}:${minutes} ${ampm}`;
   }
 
-  return `${date.getDate().toString().padStart(2, "0")}/${
-    (date.getMonth() + 1).toString().padStart(2, "0")
-  }/${date.getFullYear()}`;
+  return `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}/${date.getFullYear()}`;
 }
 
-export default function ConversationItem({ convo, active, onClick, unreadCount = 0 }) {
-
+export default function ConversationItem({
+  convo,
+  active,
+  onClick,
+  unreadCount = 0,
+}) {
+  const { userProfiles } = useSocket();
   const me = JSON.parse(localStorage.getItem("user"))?._id;
   const isAdmin = convo.isGroup && convo.admins.includes(me);
+
+  const targetId = convo.userId;
+  const liveStatus = userProfiles[targetId]?.status || "offline";
 
   const displayName = convo.isGroup
     ? convo.name
@@ -63,10 +72,26 @@ export default function ConversationItem({ convo, active, onClick, unreadCount =
       }`}
     >
       {/* Avatar */}
-      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
-        {displayName?.charAt(0)?.toUpperCase() || "?"}
-      </div>
+      <div className="relative">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
+          {displayName?.charAt(0)?.toUpperCase() || "?"}
+        </div>
 
+        {!convo.isGroup && (
+          <span
+            className={`
+        absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white
+        ${
+          liveStatus === "online"
+            ? "bg-green-500"
+            : liveStatus === "away"
+            ? "bg-yellow-500"
+            : "bg-gray-200"
+        }
+      `}
+          ></span>
+        )}
+      </div>
       {/* Name + last msg */}
       <div className="flex-1 min-w-0 items-center">
         <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
