@@ -37,7 +37,7 @@ export default function SettingsPage() {
       setName(u.name || "");
       setAbout(u.about || "");
       setStatus(u.status || "online");
-      setPreview(res.data.user.avatar);
+      setPreview(getAvatarUrl(u.avatar));
     } catch (err) {
       console.error("Failed to load settings:", err);
     } finally {
@@ -180,16 +180,15 @@ export default function SettingsPage() {
               value={about} onChange={(e) => setAbout(e.target.value)} />
           </div>
 
-          <div>
+          {/* <div>
             <label className="flex items-center gap-2 text-sm font-semibold mb-1"><Power size={18} /> Status</label>
             <select className="w-full px-3 py-2 rounded-lg border bg-gray-50 dark:bg-gray-800"
               value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="online">Online</option>
               <option value="away">Away</option>
-              <option value="busy">Busy</option>
               <option value="offline">Offline</option>
             </select>
-          </div>
+          </div> */}
 
           <button type="submit" disabled={saving}
             className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg flex items-center justify-center gap-2">
