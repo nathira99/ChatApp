@@ -3,7 +3,9 @@ const path = require("path");
 
 const storage = multer.diskStorage({
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const ext = file.originalname.split(".").pop();
+    const unique = Date.now()+ "-" + Math.round(Math.random() * 1E9);
+    cb(null, `${unique}.${ext}`);
   },
 });
 
