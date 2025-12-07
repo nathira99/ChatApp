@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { formatDistanceToNow, isToday } from "date-fns";
 import { useSocket } from "../../context/SocketContext";
+import { getAvatarUrl } from "../../utils/avatar";
 
 function formatMessageTime(timestamp) {
   if (!timestamp) return "";
@@ -34,6 +35,7 @@ export default function ConversationItem({
   unreadCount = 0,
 }) {
   const { userProfiles } = useSocket();
+  const [imgFailed, setImgFailed] = useState(false);
   const me = JSON.parse(localStorage.getItem("user"))?._id;
   const isAdmin = convo.isGroup && convo.admins.includes(me);
 
@@ -43,6 +45,22 @@ export default function ConversationItem({
   const displayName = convo.isGroup
     ? convo.name
     : convo.otherUser?.name || "Unknown";
+
+  let avatarUrl = null;
+
+  if (!convo.isGroup) {
+    const profile = userProfiles[targetId];
+    if (profile?.avatar) {
+      avatarUrl = getAvatarUrl(profile.avatar);
+    }
+  }
+
+  if (!avatarUrl && convo.otherUser?.avatar) {
+    avatarUrl = getAvatarUrl(convo.otherUser.avatar);
+  }
+    if (!avatarUrl && convo .avatar) {
+      avatarUrl = getAvatarUrl(convo.avatar);
+    }
 
   const isYou = String(convo.lastMessageSender) === String(me);
 
@@ -62,6 +80,10 @@ export default function ConversationItem({
     ? formatMessageTime(convo.lastMessageTime)
     : "";
 
+  useEffect(() => {
+    setImgFailed(false);
+  },[avatarUrl]);
+
   return (
     <div
       onClick={onClick}
@@ -73,10 +95,29 @@ export default function ConversationItem({
     >
       {/* Avatar */}
       <div className="relative">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
-          {displayName?.charAt(0)?.toUpperCase() || "?"}
-        </div>
+        {/* ---- PRIVATE CHAT AVATAR ---- */}
+        {avatarUrl && !imgFailed ? (
+            <img
+              src={avatarUrl}
+              alt="avatar"
+              className="w-10 h-10 rounded-full object-cover border"
+              onError={() => {
+                setImgFailed(true);
+              }}
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
+              {displayName?.charAt(0)?.toUpperCase() || "?"}
+            </div>
+          )}
 
+          {/* ---- GROUP CHAT AVATAR */}
+          {/* <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
+            {displayName?.charAt(0)?.toUpperCase() || "?"}
+          </div> */}
+        
+
+        {/* ---- STATUS DOT (only private chats) ---- */}
         {!convo.isGroup && (
           <span
             className={`

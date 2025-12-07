@@ -19,6 +19,33 @@ export const SocketProvider = ({ children }) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [userProfiles, setUserProfiles] = useState({});
 
+  // load all user profiles on connect 
+async function loadInitialProfiles() {
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/users/all`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    const data = await res.json();
+
+    // save into userProfiles
+    const map = {};
+    data.forEach(u => {
+      map[u._id] = {
+        ...u,
+        avatar: getAvatarUrl(u.avatar),
+        status: "offline", // initial until socket updates
+      };
+    });
+
+    setUserProfiles(map);
+
+  } catch (err) {
+    console.error("Error loading initial profiles:", err);
+  }
+}
   // --------------------- CONNECT SOCKET --------------------------
   useEffect(() => {
     // user logged out → stop socket
@@ -48,6 +75,7 @@ export const SocketProvider = ({ children }) => {
 
     // --------------------- ON CONNECT --------------------------
     newSocket.on("connect", async () => {
+      loadInitialProfiles();
       // console.log("✅ Socket connected:", newSocket.id, "for user:", user._id);
       console.log("✅ Socket connected");
 
