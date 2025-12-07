@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 import { Loader2 } from "lucide-react";
+import { getAvatarUrl } from "../../utils/avatar";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -26,7 +27,8 @@ export default function AdminUsers() {
 
   // ------------------ ACTIVATE / DEACTIVATE ------------------
   const toggleActive = async (id, isDeactivated) => {
-    if (!window.confirm("Are you sure you want to deactivate this user?")) return;
+    if (!window.confirm("Are you sure you want to deactivate this user?"))
+      return;
 
     try {
       const action = isDeactivated ? "reactivate" : "deactivate";
@@ -70,65 +72,79 @@ export default function AdminUsers() {
       </h1>
 
       <div className="max-w-[90vw] overflow-auto bg-white dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl">
-  <table className="min-w-[600px] text-sm ">
-    <thead className="bg-gray-100 dark:bg-gray-700">
-      <tr>
-        <th className="p-3 text-left">Name</th>
-        <th className="p-3 text-left">Email</th>
-        <th className="p-3 text-center">Joined At</th>
-        <th className="p-3 text-center">Status</th>
-        <th className="p-3 text-center">Actions</th>
-      </tr>
-    </thead>
+        <table className="min-w-[600px] text-sm ">
+          <thead className="bg-gray-100 dark:bg-gray-700">
+            <tr>
+              <th className="p-3 text-left">Profile</th>
+              <th className="p-3 text-left">Name</th>
+              <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-center">Joined At</th>
+              <th className="p-3 text-center">Status</th>
+              <th className="p-3 text-center">Actions</th>
+            </tr>
+          </thead>
 
-    <tbody>
-      {users.map((u) => (
-        <tr
-          key={u._id}
-          className="border-t border-gray-200 dark:border-gray-700"
-        >
-          <td className="p-3 font-medium whitespace-nowrap">{u.name}</td>
+          <tbody>
+            {users.map((u) => (
+              <tr
+                key={u._id}
+                className="border-t border-gray-200 dark:border-gray-700"
+              >
+                <td className="p-3">
+                  {u.avatar ? (
+                    <img
+                      src={getAvatarUrl(u.avatar)}
+                      alt="avatar"
+                      className="w-10 h-10 rounded-full object-cover border"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
+                      {u.name?.charAt(0)?.toUpperCase() || "?"}
+                    </div>
+                  )}
+                </td>
+                <td className="p-3 font-medium whitespace-nowrap">{u.name}</td>
 
-          <td className="p-3 whitespace-nowrap">{u.email}</td>
+                <td className="p-3 whitespace-nowrap">{u.email}</td>
 
-          <td className="p-3 text-center whitespace-nowrap">
-            {new Date(u.createdAt).toLocaleString()}
-          </td>
+                <td className="p-3 text-center whitespace-nowrap">
+                  {new Date(u.createdAt).toLocaleString()}
+                </td>
 
-          <td className="p-3 text-center whitespace-nowrap">
-            <span
-              className={`px-3 py-1 rounded-full text-xs ${
-                u.isDeactivated
-                  ? "bg-red-200 text-red-800"
-                  : "bg-green-200 text-green-800"
-              }`}
-            >
-              {u.isDeactivated ? "Deactivated" : "Active"}
-            </span>
-          </td>
+                <td className="p-3 text-center whitespace-nowrap">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs ${
+                      u.isDeactivated
+                        ? "bg-red-200 text-red-800"
+                        : "bg-green-200 text-green-800"
+                    }`}
+                  >
+                    {u.isDeactivated ? "Deactivated" : "Active"}
+                  </span>
+                </td>
 
-          <td className="p-3 text-center whitespace-nowrap space-x-2">
-            <button
-              onClick={() => toggleActive(u._id, u.isDeactivated)}
-              className={`px-3 py-1 rounded text-white ${
-                u.isDeactivated ?  "bg-green-600" : "bg-yellow-600"
-              }`}
-            >
-              {u.isDeactivated ? "Activate" : "Deactivate"}
-            </button>
+                <td className="p-3 text-center whitespace-nowrap space-x-2">
+                  <button
+                    onClick={() => toggleActive(u._id, u.isDeactivated)}
+                    className={`px-3 py-1 rounded text-white ${
+                      u.isDeactivated ? "bg-green-600" : "bg-yellow-600"
+                    }`}
+                  >
+                    {u.isDeactivated ? "Activate" : "Deactivate"}
+                  </button>
 
-            <button
-              onClick={() => handleDelete(u._id)}
-              className="px-3 py-1 rounded bg-red-600 text-white"
-            >
-              Delete
-            </button>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
+                  <button
+                    onClick={() => handleDelete(u._id)}
+                    className="px-3 py-1 rounded bg-red-600 text-white"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
