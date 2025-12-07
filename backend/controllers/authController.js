@@ -132,7 +132,8 @@ exports.updateProfile = async (req, res) => {
     if (req.body.name) user.name = req.body.name;
     if (req.body.about) user.about = req.body.about;
     if (req.body.status) user.status = req.body.status;
-    if (req.file && req.file.path) {
+    if (req.file) {
+      console.log("avatar file:", req.file);
       user.avatar = req.file.path;
     }
 

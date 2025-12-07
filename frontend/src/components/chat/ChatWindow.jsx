@@ -41,11 +41,11 @@ export default function ChatWindow({ chat, onClose }) {
   const targetId = chat.userId === user._id ? chat._id : chat.userId;
   const liveStatus = !chat.isGroup
     ? userProfiles[targetId]?.status : null;
-    console.log("me:", user._id);
-    console.log("target:", targetId);
-    console.log("LIVE STATUS:", liveStatus);
+    // console.log("me:", user._id);
+    // console.log("target:", targetId);
+    // console.log("LIVE STATUS:", liveStatus);
 
-  console.log("ACTIVE CHAT:", chat);
+  // console.log("ACTIVE CHAT:", chat);
   // -------- Close menu when click outside ----------
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -171,7 +171,7 @@ export default function ChatWindow({ chat, onClose }) {
             "Content-Type": "multipart/form-data",
           },
         });
-        console.log(`${chat._id}`);
+        // console.log(`${chat._id}`);
 
         newMsg = res.data;
 

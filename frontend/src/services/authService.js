@@ -55,7 +55,7 @@ export const authService = {
     if(data.about) form.append("about", data.about);
     if(data.status) form.append("status", data.status);
 
-    const res = await api.put("/auth/profile", form, {
+    const res = await api.put("/auth/upload/profile", form, {
       headers: {
         "Content-Type": "multipart/form-data",
       },

@@ -95,6 +95,7 @@ exports.sendMessage = async (req, res) => {
 exports.sendFileMessage = async (req, res) => {
   try {
     const file = req.file;
+    console.log(" file:", file);
     const { receiverId } = req.body;
     const senderId = req.user._id;
 

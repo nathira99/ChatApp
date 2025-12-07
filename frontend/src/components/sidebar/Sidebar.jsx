@@ -204,9 +204,9 @@ export default function Sidebar({ onSelectChat, openChatId }) {
     loadGroups();
   }, []);
 
-  useEffect(() => {
-    getUserGroups().then((res) => console.log("API groups ==>", res));
-  }, []);
+  // useEffect(() => {
+  //   getUserGroups().then((res) => console.log("API groups ==>", res));
+  // }, []);
 
   /* ----------------------------------------------
       REAL-TIME SIDEBAR REFRESH

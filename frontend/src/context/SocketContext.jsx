@@ -48,7 +48,8 @@ export const SocketProvider = ({ children }) => {
 
     // --------------------- ON CONNECT --------------------------
     newSocket.on("connect", async () => {
-      console.log("✅ Socket connected:", newSocket.id, "for user:", user._id);
+      // console.log("✅ Socket connected:", newSocket.id, "for user:", user._id);
+      console.log("✅ Socket connected");
 
       newSocket.emit("register", user._id);
 
@@ -108,7 +109,7 @@ export const SocketProvider = ({ children }) => {
 
     // --------------------- STATUS UPDATE EVENTS --------------------------
     newSocket.on("user:status:update", ({ userId, status }) => {
-      console.log(`⚡ Status update -> User: ${userId} | Status: ${status}`);
+      // console.log(`⚡ Status update -> User: ${userId} | Status: ${status}`);
       setUserProfiles((prev) => ({
         ...prev,
         [userId]: {
@@ -128,7 +129,7 @@ export const SocketProvider = ({ children }) => {
           avatar: getAvatarUrl(updatedUser.avatar),
         },
       }));
-      console.log("🧩 Updated user profile:", updatedUser.name);
+      // console.log("🧩 Updated user profile:", updatedUser.name);
     });
 
     // --------------------- DISCONNECT --------------------------

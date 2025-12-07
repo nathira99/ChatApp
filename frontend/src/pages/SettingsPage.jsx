@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useSocket } from "../context/SocketContext";
 import { useAuth } from "../hooks/useAuth";
@@ -20,6 +21,8 @@ export default function SettingsPage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [about, setAbout] = useState("");
@@ -80,7 +83,7 @@ export default function SettingsPage() {
       form.append("status", status);
       if (avatarFile) form.append("avatar", avatarFile);
 
-      const res = await api.put("/auth/profile", form, {
+      const res = await api.put("/auth/upload/profile", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -98,7 +101,6 @@ export default function SettingsPage() {
       broadcastProfileUpdate(updated);
 
       alert("Profile updated successfully");
-      window.location.href = "/profile";
     } catch (err) {
       console.error(err);
       alert("Failed to update profile");
@@ -115,7 +117,7 @@ export default function SettingsPage() {
       await api.put("/auth/deactivate");
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      navigate("/profile");
     } catch (err) {
       console.error(err);
       alert("Failed to deactivate your account");

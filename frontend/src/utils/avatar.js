@@ -1,6 +1,8 @@
 export const getAvatarUrl = (path) => {
   if (!path) return "/avatar.png"; // fallback
 
+  // console.log("Avatar path:", path);
+
   // Already absolute URL?
   if (path.startsWith("http")) return path;
 
