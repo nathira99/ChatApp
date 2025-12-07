@@ -89,7 +89,7 @@ export default function SettingsPage() {
 
       const updated = res.data.user;
 
-      console.log("Profile update response:", updated);
+      // console.log("Profile update response:", updated);
 
       // Update Global AuthContext + localStorage
       updateUser(updated);
@@ -101,6 +101,7 @@ export default function SettingsPage() {
       broadcastProfileUpdate(updated);
 
       alert("Profile updated successfully");
+      navigate("/");
     } catch (err) {
       console.error(err);
       alert("Failed to update profile");

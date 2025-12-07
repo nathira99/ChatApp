@@ -44,9 +44,17 @@ export default function Navbar() {
           className="font-medium text-gray-800 dark:text-gray-200 hover:text-blue-600 flex items-center gap-2"
         >
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
+              {user.avatar ? (
+                <img 
+              src={user.avatar} 
+              alt="avatar" 
+              className="w-10 h-10 rounded-full object-cover border"
+              />
+              ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center font-semibold">
               {user.name.charAt(0).toUpperCase()}
-            </div>
+              </div>
+              )}
 
             {/* STATUS DOT FIXED */}
             <span
