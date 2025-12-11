@@ -79,6 +79,7 @@ export default function AdminUsers() {
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Email</th>
               <th className="p-3 text-center">Joined At</th>
+              <th className="p-3 text-center">Last Seen</th>
               <th className="p-3 text-center">Status</th>
               <th className="p-3 text-center">Actions</th>
             </tr>
@@ -110,6 +111,33 @@ export default function AdminUsers() {
                 <td className="p-3 text-center whitespace-nowrap">
                   {new Date(u.createdAt).toLocaleString()}
                 </td>
+
+                <td className="p-3 text-center whitespace-nowrap">
+  {u.status === "online" && (
+    <span className="px-3 py-1 rounded-full bg-green-200 text-green-800 text-xs">
+      Online
+    </span>
+  )}
+
+  {u.status === "away" && (
+    <span className="px-3 py-1 rounded-full bg-yellow-200 text-yellow-800 text-xs">
+      Away
+    </span>
+  )}
+
+  {u.status === "offline" && (
+    <div className="flex flex-col items-center text-xs">
+      <span className="px-3 py-1 rounded-full bg-gray-200 text-gray-800">
+        Offline
+      </span>
+      {u.lastSeen && (
+        <span className="text-gray-500 mt-1">
+          Last seen: {new Date(u.lastSeen).toLocaleString()}
+        </span>
+      )}
+    </div>
+  )}
+</td>
 
                 <td className="p-3 text-center whitespace-nowrap">
                   <span

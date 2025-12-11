@@ -37,20 +37,30 @@ const initSocket = (server) => {
   };
 
   const setOfflineForSocket = (socketId) => {
-    for (const [userId, set] of onlineUsers.entries()) {
-      if (set.has(socketId)) {
-        set.delete(socketId);
-        if (set.size === 0) {
-          onlineUsers.delete(userId);
-          userStatus.set(userId, "offline");
-          io.emit("user:status", { userId, status: "offline" });
-        }
-        io.emit("users:online", Array.from(onlineUsers.keys()));
-        console.log(`🔴 User ${userId} disconnected (socket ${socketId}).`);
-        break;
+  for (const [userId, set] of onlineUsers.entries()) {
+    if (set.has(socketId)) {
+      set.delete(socketId);
+
+      const becameOffline = set.size === 0;
+
+      if (becameOffline) {
+        onlineUsers.delete(userId);
+        userStatus.set(userId, "offline");
+        io.emit("user:status", { userId, status: "offline" });
+      } else {
+        onlineUsers.set(userId, set);
       }
+
+      io.emit("users:online", Array.from(onlineUsers.keys()));
+      console.log(`🔴 User ${userId} disconnected (socket ${socketId}).`);
+
+      return { userId, becameOffline };
     }
-  };
+  }
+
+  // ⭐ NEVER RETURN undefined — always return safe object
+  return { userId: null, becameOffline: false };
+};
 
   io.on("connection", (socket) => {
     console.log("⚡ User connected:", socket.id);
@@ -159,8 +169,44 @@ const initSocket = (server) => {
     });
 
     // 🔴 On disconnect
-    socket.on("disconnect", () => {
-      setOfflineForSocket(socket.id);
+    socket.on("disconnect", async () => {
+      // First remove socket and find out whether user actually went offline
+      const { userId, becameOffline } = setOfflineForSocket(socket.id);
+
+      if (userId && becameOffline) {
+        const lastSeen = new Date();
+        try {
+          await User.findByIdAndUpdate(userId, {
+            lastSeen,
+            status: "offline",
+          });
+
+          io.emit("user:status:update", {
+            userId,
+            status: "offline",
+            lastSeen,
+          });
+
+          console.log("Last seen saved for:", userId, lastSeen);
+        } catch (err) {
+          console.error("Failed to save last seen:", err);
+        }
+      } else if (userId) {
+        // user still connected on other sockets — publish a status update if needed
+        console.log(`User ${userId} disconnected one socket but still has active sockets.`);
+      }
+
+      console.log(`🔴 Socket disconnected: ${socket.id}`);
+    });
+
+    // ON AWAY STATUS
+    socket.on("user:status:away", async({userId, status}) => {
+      const update = { status };
+      if (status === "away") update.lastSeen = new Date();
+
+      await User.findByIdAndUpdate(userId, update);
+
+      io.emit("user:status:update", { userId, status, lastSeen: update.lastSeen})
     });
   });
 

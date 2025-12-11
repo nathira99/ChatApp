@@ -136,13 +136,14 @@ async function loadInitialProfiles() {
     });
 
     // --------------------- STATUS UPDATE EVENTS --------------------------
-    newSocket.on("user:status:update", ({ userId, status }) => {
+    newSocket.on("user:status:update", ({ userId, status, lastSeen }) => {
       // console.log(`⚡ Status update -> User: ${userId} | Status: ${status}`);
       setUserProfiles((prev) => ({
         ...prev,
         [userId]: {
           ...(prev[userId] || {}),
           status,
+          lastSeen
         },
       }));
     });

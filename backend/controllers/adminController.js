@@ -7,7 +7,8 @@ const Report = require("../models/Report");
 // 🧾 Get all users (excluding passwords)
 exports.listUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password").lean();
+    const users = await User.find().select("-password");
+    console.log("User Data:", users )
     res.json(users);
   } catch (err) {
     console.error("Error listing users:", err);

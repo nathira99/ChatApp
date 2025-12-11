@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
     joinDate: { type: Date, default: Date.now },
+    lastSeen: { type: Date, default: null },
     verificationToken: String,
     verificationExpires: Date,
     resetPasswordToken: String,
